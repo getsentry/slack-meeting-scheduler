@@ -1,0 +1,28 @@
+[project]
+name = "slack-meeting-scheduler"
+version = "0.1.0"
+description = "A Slack app for scheduling Google Meet meetings with reaction-based attendance tracking"
+requires-python = ">=3.11"
+dependencies = [
+    "slack-bolt>=1.18.0",
+    "google-api-python-client>=2.100.0",
+    "google-auth>=2.23.0",
+    "google-auth-oauthlib>=1.1.0",
+    "google-auth-httplib2>=0.1.1",
+    "python-dateutil>=2.8.2",
+    "dateparser>=1.1.8",
+    "pytz>=2023.3",
+    "pydantic>=2.4.0",
+    "python-dotenv>=1.0.0",
+    "sentry-sdk>=2.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-mock>=3.11.1",
+    "black>=23.9.0",
+    "ruff>=0.0.290",
+    "mypy>=1.5.0",
+]
