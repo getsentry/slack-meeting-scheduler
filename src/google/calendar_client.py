@@ -177,7 +177,7 @@ class GoogleCalendarClient:
 
             # Extract useful information
             event_link = created_event.get('htmlLink')
-            meet_link = created_event.get('hangoutLink') or created_event.get('conferenceData', {}).get('entryPoints', [{}])[0].get('uri')
+            meet_link = self.get_meet_link(created_event)
 
             logger.info(
                 f"Event created successfully: {event_link}\n"
