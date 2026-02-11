@@ -92,6 +92,14 @@ async def main():
                 f"min_reactions={config.min_reactions}, "
                 f"business_hours={config.business_hours_start}-{config.business_hours_end}")
 
+    # Validate Slack tokens are present
+    if not config.slack_bot_token or not config.slack_app_token:
+        logger.error("Missing Slack tokens. Set SLACK_BOT_TOKEN and SLACK_APP_TOKEN in .env")
+        print("\nError: Missing Slack configuration")
+        print("For Slack integration, set SLACK_BOT_TOKEN and SLACK_APP_TOKEN in .env")
+        print("For CLI testing without Slack, use: python -m src.cli")
+        sys.exit(1)
+
     # Create Slack app
     app = create_slack_app()
 

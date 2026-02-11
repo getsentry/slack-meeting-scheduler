@@ -204,12 +204,12 @@ uv run python -m src.cli find \
   --min-attendees 2 \
   --timezone "America/New_York"
 
-# Actually create a calendar event (remove --dry-run or use --no-dry-run)
+# Actually create a calendar event (use --execute)
 uv run python -m src.cli schedule \
   --attendees "alice@example.com:America/New_York" \
   --time "tomorrow 3pm" \
   --timezone "America/New_York" \
-  --no-dry-run
+  --execute
 ```
 
 **CLI Options:**
@@ -219,7 +219,7 @@ uv run python -m src.cli schedule \
 - `--time`: Meeting time in natural language (required) e.g., "tomorrow 2pm", "Jan 20 at 3:30pm"
 - `--timezone`: Timezone for interpreting the time (default: UTC)
 - `--duration`: Meeting duration in minutes (default: 30)
-- `--dry-run` / `--no-dry-run`: Dry run mode (default: true)
+- `--execute`: Actually create the event (default: dry run mode)
 - `-v` / `--verbose`: Enable verbose logging
 
 **`find` command** - Find optimal time:
@@ -228,14 +228,20 @@ uv run python -m src.cli schedule \
 - `--search-days`: Number of days ahead to search (default: 14)
 - `--min-attendees`: Minimum attendees required (default: 1)
 - `--timezone`: Reference timezone for business hours (default: UTC)
-- `--dry-run` / `--no-dry-run`: Dry run mode (default: true)
+- `--execute`: Actually create the event (default: dry run mode)
 - `-v` / `--verbose`: Enable verbose logging
 
 **Notes:**
 - CLI mode doesn't require Slack tokens (SLACK_BOT_TOKEN and SLACK_APP_TOKEN are optional)
 - You still need Google Calendar credentials (GOOGLE_SERVICE_ACCOUNT_PATH)
-- By default, CLI runs in dry-run mode (won't create events). Use `--no-dry-run` to actually create events.
+- By default, CLI runs in dry-run mode (won't create events). Use `--execute` to actually create events.
 - Attendee emails should be valid Google accounts for calendar integration to work
+
+**Quick Start:**
+Run the example script to see the CLI in action:
+```bash
+./example_cli_test.sh
+```
 
 ### Slash Command
 
