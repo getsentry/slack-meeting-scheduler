@@ -498,7 +498,7 @@ When deploying to Cloud Run, set these environment variables:
 
 ## License
 
-[Add your license here]
+Apache
 
 ## Support
 
@@ -507,13 +507,3 @@ For issues and questions:
 - Check existing issues for solutions
 - Review logs for error messages
 
-## Future Enhancements
-
-- Persistent state storage (Redis/database)
-- Custom business hours per user
-- Recurring meeting support
-- Interactive buttons for confirming/canceling
-- Multiple time option voting
-- Meeting templates
-- Admin commands
-- Analytics and usage tracking
