@@ -1,6 +1,7 @@
 """Scheduling engine with scoring algorithm."""
 
 import logging
+from collections import Counter
 from datetime import datetime, time, timedelta
 from typing import Dict, List, Optional, Tuple
 
@@ -48,8 +49,27 @@ class SchedulingEngine:
         score = num_available * 100
 
         # Day of week bonus (prefer earlier in week)
-        # Monday = 0, Tuesday = 1, ..., Friday = 4
-        day_of_week = slot.weekday()
+        # Calculate based on attendees' local time to avoid UTC conversion issues
+        if user_timezones:
+            local_weekdays = []
+            for user_email, user_tz in user_timezones.items():
+                try:
+                    local_time = TimezoneHandler.convert_to_timezone(slot, user_tz)
+                    local_weekdays.append(local_time.weekday())
+                except (ValueError, Exception) as e:
+                    logger.debug(f"Could not convert to timezone {user_tz}: {e}")
+                    continue
+
+            if local_weekdays:
+                # Use most common weekday (mode) to handle edge cases
+                day_of_week = Counter(local_weekdays).most_common(1)[0][0]
+            else:
+                # Fallback to UTC
+                day_of_week = slot.weekday()
+        else:
+            # Fallback to UTC if no timezone info provided
+            day_of_week = slot.weekday()
+
         if day_of_week < 5:  # Weekday
             # Monday gets +40, Tuesday +30, ..., Friday +0
             day_bonus = (4 - day_of_week) * 10
