@@ -192,6 +192,11 @@ class MeetingCoordinator:
                 else:
                     user_timezones[user_id] = "UTC"  # Fallback
 
+            # Ensure initiator's timezone is available (even if they didn't react)
+            if request.initiator_user_id not in user_timezones:
+                initiator_tz = await slack_utils.get_user_timezone(app, request.initiator_user_id)
+                user_timezones[request.initiator_user_id] = initiator_tz if initiator_tz else "UTC"
+
             if not user_emails:
                 await self._post_error(
                     app, request.channel_id, request.message_ts,
@@ -323,7 +328,6 @@ class MeetingCoordinator:
                           for user_id, email in user_emails.items()}
 
         # Find optimal time (use initiator's timezone as reference for business hours)
-        initiator_email = user_emails.get(request.initiator_user_id)
         initiator_tz = user_timezones.get(request.initiator_user_id, "UTC")
 
         result = SchedulingEngine.find_optimal_time(
