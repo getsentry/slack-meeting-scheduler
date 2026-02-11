@@ -1,5 +1,6 @@
 """Google Calendar API client."""
 
+import asyncio
 import logging
 import uuid
 from datetime import datetime
@@ -73,9 +74,9 @@ class GoogleCalendarClient:
                 f"from {time_min} to {time_max}"
             )
 
-            # Execute freebusy query
+            # Execute freebusy query in thread pool to avoid blocking event loop
             request = service.freebusy().query(body=body)
-            response = request.execute()
+            response = await asyncio.to_thread(request.execute)
 
             # Parse response
             calendars = response.get('calendars', {})
@@ -171,7 +172,8 @@ class GoogleCalendarClient:
                 conferenceDataVersion=1,
                 sendUpdates='all'  # Send email invitations to all attendees
             )
-            created_event = request.execute()
+            # Run in thread pool to avoid blocking event loop
+            created_event = await asyncio.to_thread(request.execute)
 
             # Extract useful information
             event_link = created_event.get('htmlLink')

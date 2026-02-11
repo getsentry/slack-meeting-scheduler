@@ -2,7 +2,7 @@
 
 import logging
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Dict, List
 
 import sentry_sdk
@@ -302,10 +302,7 @@ class MeetingCoordinator:
         logger.info("Finding optimal availability for meeting")
 
         # Query freebusy for all participants
-        search_start = datetime.now(TimezoneHandler.convert_to_timezone(
-            datetime.utcnow().replace(tzinfo=None),
-            list(user_timezones.values())[0]
-        ).tzinfo)
+        search_start = datetime.now(timezone.utc)
         search_end = search_start + timedelta(days=self._config.max_days_ahead)
 
         freebusy_data = await self._calendar_client.get_freebusy(
