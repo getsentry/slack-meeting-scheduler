@@ -75,14 +75,14 @@ class SchedulingEngine:
                     score += 20
 
                 # Edge hour penalty (9-10am or 4-5pm local time)
-                if 9 <= avg_hour < 10 or 16 <= avg_hour < 18:
+                if 9 <= avg_hour < 10 or 16 <= avg_hour < 17:
                     score -= 10
         else:
             # Fallback to UTC if no timezone info provided
             hour = slot.hour
             if 11 <= hour <= 14:
                 score += 20
-            if hour in [9, 16, 17]:
+            if hour in [9, 16]:
                 score -= 10
 
         logger.debug(
