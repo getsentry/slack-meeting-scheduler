@@ -29,7 +29,7 @@ A Slack app that schedules Google Meet meetings with reaction-based attendance t
 ### 1. Clone the Repository
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/getsentry/slack-meeting-scheduler
 cd slack-meeting-scheduler
 ```
 
