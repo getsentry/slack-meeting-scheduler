@@ -500,9 +500,13 @@ class MeetingCoordinator:
         """Format duration in seconds to human-readable string."""
         if seconds < 60:
             return f"{seconds} second{'s' if seconds != 1 else ''}"
-        elif seconds < 3600:
+        elif seconds < 7200:  # Less than 2 hours - show in minutes
             minutes = seconds // 60
             return f"{minutes} minute{'s' if minutes != 1 else ''}"
         else:
             hours = seconds // 3600
-            return f"{hours} hour{'s' if hours != 1 else ''}"
+            remaining_minutes = (seconds % 3600) // 60
+            if remaining_minutes == 0:
+                return f"{hours} hour{'s' if hours != 1 else ''}"
+            else:
+                return f"{hours} hour{'s' if hours != 1 else ''} {remaining_minutes} minute{'s' if remaining_minutes != 1 else ''}"

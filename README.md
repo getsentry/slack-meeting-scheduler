@@ -184,6 +184,59 @@ Handlers registered, starting Socket Mode connection...
 
 ## Usage
 
+### CLI Testing (Without Slack)
+
+For local testing without deploying to Slack or Cloud Run, use the built-in CLI:
+
+```bash
+# Test scheduling at a specific time (dry run - doesn't create event)
+uv run python -m src.cli schedule \
+  --attendees "alice@example.com:America/New_York,bob@example.com:Europe/London" \
+  --time "tomorrow 2pm" \
+  --duration 30 \
+  --timezone "America/New_York"
+
+# Test finding optimal availability (dry run)
+uv run python -m src.cli find \
+  --attendees "alice@example.com:America/New_York,bob@example.com:Europe/London" \
+  --duration 60 \
+  --search-days 7 \
+  --min-attendees 2 \
+  --timezone "America/New_York"
+
+# Actually create a calendar event (remove --dry-run or use --no-dry-run)
+uv run python -m src.cli schedule \
+  --attendees "alice@example.com:America/New_York" \
+  --time "tomorrow 3pm" \
+  --timezone "America/New_York" \
+  --no-dry-run
+```
+
+**CLI Options:**
+
+**`schedule` command** - Schedule at a specific time:
+- `--attendees`: Comma-separated list of `email:timezone` pairs (required)
+- `--time`: Meeting time in natural language (required) e.g., "tomorrow 2pm", "Jan 20 at 3:30pm"
+- `--timezone`: Timezone for interpreting the time (default: UTC)
+- `--duration`: Meeting duration in minutes (default: 30)
+- `--dry-run` / `--no-dry-run`: Dry run mode (default: true)
+- `-v` / `--verbose`: Enable verbose logging
+
+**`find` command** - Find optimal time:
+- `--attendees`: Comma-separated list of `email:timezone` pairs (required)
+- `--duration`: Meeting duration in minutes (default: 30)
+- `--search-days`: Number of days ahead to search (default: 14)
+- `--min-attendees`: Minimum attendees required (default: 1)
+- `--timezone`: Reference timezone for business hours (default: UTC)
+- `--dry-run` / `--no-dry-run`: Dry run mode (default: true)
+- `-v` / `--verbose`: Enable verbose logging
+
+**Notes:**
+- CLI mode doesn't require Slack tokens (SLACK_BOT_TOKEN and SLACK_APP_TOKEN are optional)
+- You still need Google Calendar credentials (GOOGLE_SERVICE_ACCOUNT_PATH)
+- By default, CLI runs in dry-run mode (won't create events). Use `--no-dry-run` to actually create events.
+- Attendee emails should be valid Google accounts for calendar integration to work
+
 ### Slash Command
 
 Use the `/schedule-meet` command in any Slack channel:

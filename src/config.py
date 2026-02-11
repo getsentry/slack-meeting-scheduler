@@ -18,9 +18,9 @@ class Config(BaseSettings):
 
     model_config = SettingsConfigDict(env_file='.env', env_file_encoding='utf-8', extra='ignore')
 
-    # Slack Configuration
-    slack_bot_token: str = Field(..., description="Slack bot token (xoxb-...)")
-    slack_app_token: str = Field(..., description="Slack app token for Socket Mode (xapp-...)")
+    # Slack Configuration (optional for CLI mode)
+    slack_bot_token: Optional[str] = Field(None, description="Slack bot token (xoxb-...)")
+    slack_app_token: Optional[str] = Field(None, description="Slack app token for Socket Mode (xapp-...)")
 
     # Google Configuration
     # Optional: Only needed for local development. Cloud Run uses the service account identity automatically.
