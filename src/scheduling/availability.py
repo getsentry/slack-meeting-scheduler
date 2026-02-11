@@ -20,7 +20,8 @@ class AvailabilityChecker:
         duration_minutes: int,
         business_start: time,
         business_end: time,
-        slot_increment_minutes: int = 30
+        slot_increment_minutes: int = 30,
+        reference_timezone: str = None
     ) -> List[datetime]:
         """Generate candidate time slots during business hours.
 
@@ -31,6 +32,8 @@ class AvailabilityChecker:
             business_start: Business hours start time
             business_end: Business hours end time
             slot_increment_minutes: Time between candidate slots (default: 30)
+            reference_timezone: Timezone for interpreting business hours (e.g., "America/Los_Angeles").
+                               If not provided, uses start_date's timezone.
 
         Returns:
             List of candidate slot start times (UTC)
@@ -38,19 +41,30 @@ class AvailabilityChecker:
         if start_date.tzinfo is None:
             raise ValueError("start_date must be timezone-aware")
 
+        # Determine the timezone for business hours
+        import pytz
+        if reference_timezone:
+            biz_tz = pytz.timezone(reference_timezone)
+        else:
+            biz_tz = start_date.tzinfo
+
+        # Convert start_date to reference timezone to get the correct starting date
+        start_date_local = start_date.astimezone(biz_tz)
+
         candidates = []
-        current_date = start_date.date()
-        end_date = (start_date + timedelta(days=num_days)).date()
+        current_date = start_date_local.date()
+        end_date = (start_date_local + timedelta(days=num_days)).date()
 
         logger.info(
             f"Generating candidate slots from {current_date} to {end_date}, "
-            f"duration={duration_minutes}m, increment={slot_increment_minutes}m"
+            f"duration={duration_minutes}m, increment={slot_increment_minutes}m, "
+            f"reference_tz={reference_timezone or 'start_date.tzinfo'}"
         )
 
         while current_date < end_date:
-            # Create datetime for start of day in the same timezone as start_date
+            # Create datetime for start of day in the reference timezone
             day_start = datetime.combine(current_date, business_start)
-            day_start = day_start.replace(tzinfo=start_date.tzinfo)
+            day_start = biz_tz.localize(day_start)
 
             # Skip weekends
             if TimezoneHandler.is_weekend(day_start):
@@ -60,12 +74,12 @@ class AvailabilityChecker:
 
             # Generate slots for this day
             day_end = datetime.combine(current_date, business_end)
-            day_end = day_end.replace(tzinfo=start_date.tzinfo)
+            day_end = biz_tz.localize(day_end)
 
             current_slot = day_start
             while current_slot + timedelta(minutes=duration_minutes) <= day_end:
                 # Check if slot is in the future (compared to original start_date)
-                if current_slot >= start_date:
+                if current_slot >= start_date_local:
                     # Convert to UTC for consistency
                     utc_slot = TimezoneHandler.convert_to_utc(current_slot)
                     candidates.append(utc_slot)
@@ -124,7 +138,8 @@ class AvailabilityChecker:
         slots: List[datetime],
         user_timezones: Dict[str, str],
         business_start: time,
-        business_end: time
+        business_end: time,
+        duration_minutes: int = 0
     ) -> List[datetime]:
         """Filter slots to ensure they're within business hours for ALL users.
 
@@ -133,6 +148,7 @@ class AvailabilityChecker:
             user_timezones: Dictionary mapping user IDs to timezone strings
             business_start: Business hours start time
             business_end: Business hours end time
+            duration_minutes: Meeting duration in minutes (to check end time)
 
         Returns:
             Filtered list of slots that work for all timezones
@@ -146,13 +162,25 @@ class AvailabilityChecker:
         for slot in slots:
             # Check if slot is within business hours for ALL users
             valid_for_all = True
+            slot_end = slot + timedelta(minutes=duration_minutes) if duration_minutes > 0 else None
 
             for user_id, user_tz in user_timezones.items():
+                # Check start time is within business hours
                 if not TimezoneHandler.is_business_day(
                     slot, business_start, business_end, timezone=user_tz
                 ):
                     logger.debug(
-                        f"Slot {slot.isoformat()} not in business hours for {user_id} ({user_tz})"
+                        f"Slot {slot.isoformat()} start not in business hours for {user_id} ({user_tz})"
+                    )
+                    valid_for_all = False
+                    break
+
+                # Check end time is within business hours (if duration provided)
+                if slot_end is not None and not TimezoneHandler.is_within_business_hours(
+                    slot_end, business_start, business_end, timezone=user_tz
+                ):
+                    logger.debug(
+                        f"Slot {slot.isoformat()} end ({slot_end.isoformat()}) not in business hours for {user_id} ({user_tz})"
                     )
                     valid_for_all = False
                     break

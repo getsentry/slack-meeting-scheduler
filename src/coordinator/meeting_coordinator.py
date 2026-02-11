@@ -192,9 +192,6 @@ class MeetingCoordinator:
                 else:
                     user_timezones[user_id] = "UTC"  # Fallback
 
-            # Map user IDs to emails for calendar operations
-            email_to_user_id = {email: user_id for user_id, email in user_emails.items()}
-
             if not user_emails:
                 await self._post_error(
                     app, request.channel_id, request.message_ts,
@@ -212,7 +209,7 @@ class MeetingCoordinator:
                 else:
                     await self._schedule_find_availability(
                         app, request, participants,
-                        user_emails, user_timezones, email_to_user_id
+                        user_emails, user_timezones
                     )
 
             except Exception as e:
@@ -298,8 +295,7 @@ class MeetingCoordinator:
         request: MeetingRequest,
         participants: List[str],
         user_emails: Dict[str, str],
-        user_timezones: Dict[str, str],
-        email_to_user_id: Dict[str, str]
+        user_timezones: Dict[str, str]
     ):
         """Schedule meeting by finding optimal availability.
 
@@ -309,7 +305,6 @@ class MeetingCoordinator:
             participants: List of participant user IDs
             user_emails: Dictionary mapping user IDs to emails
             user_timezones: Dictionary mapping user IDs to timezones
-            email_to_user_id: Dictionary mapping emails to user IDs
         """
         logger.info("Finding optimal availability for meeting")
 
@@ -323,18 +318,14 @@ class MeetingCoordinator:
             time_max=search_end
         )
 
-        # Map freebusy data back to user IDs
-        freebusy_by_user = {}
-        for email, busy_slots in freebusy_data.items():
-            user_id = email_to_user_id.get(email)
-            if user_id:
-                freebusy_by_user[user_id] = busy_slots
-
         # Create timezone mapping for emails (needed by scheduling engine)
         email_timezones = {email: user_timezones[user_id]
                           for user_id, email in user_emails.items()}
 
-        # Find optimal time
+        # Find optimal time (use initiator's timezone as reference for business hours)
+        initiator_email = user_emails.get(request.initiator_user_id)
+        initiator_tz = user_timezones.get(request.initiator_user_id, "UTC")
+
         result = SchedulingEngine.find_optimal_time(
             attendee_emails=list(user_emails.values()),
             duration_minutes=request.duration_minutes,
@@ -344,7 +335,8 @@ class MeetingCoordinator:
             business_end=self._config.get_business_hours_end(),
             freebusy_data=freebusy_data,
             user_timezones=email_timezones,
-            min_attendees=request.min_reactions
+            min_attendees=request.min_reactions,
+            reference_timezone=initiator_tz
         )
 
         if not result:
