@@ -70,33 +70,33 @@ class MeetingCoordinator:
                 "reaction_duration_seconds": params.reaction_duration_seconds,
             })
 
-        # Post initial message
-        message = await self._post_initial_message(
-            app, channel_id, params, user_id
-        )
-        message_ts = message["ts"]
+            # Post initial message
+            message = await self._post_initial_message(
+                app, channel_id, params, user_id
+            )
+            message_ts = message["ts"]
 
-        # Create meeting request object
-        request = MeetingRequest(
-            request_id=str(uuid.uuid4()),
-            channel_id=channel_id,
-            message_ts=message_ts,
-            initiator_user_id=user_id,
-            reaction_duration_seconds=params.reaction_duration_seconds,
-            scheduling_mode=params.scheduling_mode,
-            duration_minutes=params.duration_minutes,
-            min_reactions=params.min_reactions,
-            created_at=datetime.utcnow(),
-            specific_datetime=None,
-            participants=[]
-        )
+            # Create meeting request object
+            request = MeetingRequest(
+                request_id=str(uuid.uuid4()),
+                channel_id=channel_id,
+                message_ts=message_ts,
+                initiator_user_id=user_id,
+                reaction_duration_seconds=params.reaction_duration_seconds,
+                scheduling_mode=params.scheduling_mode,
+                duration_minutes=params.duration_minutes,
+                min_reactions=params.min_reactions,
+                created_at=datetime.utcnow(),
+                specific_datetime=None,
+                participants=[]
+            )
 
-        # Start reaction tracking (async callback)
-        await self._reaction_tracker.start_tracking(
-            request=request,
-            app=app,
-            callback=lambda req, parts: self._handle_reactions_complete(req, parts, app, params)
-        )
+            # Start reaction tracking (async callback)
+            await self._reaction_tracker.start_tracking(
+                request=request,
+                app=app,
+                callback=lambda req, parts: self._handle_reactions_complete(req, parts, app, params)
+            )
 
     async def _post_initial_message(
         self,
@@ -162,55 +162,67 @@ class MeetingCoordinator:
             f"{len(participants)} participants"
         )
 
-        # Check minimum reactions
-        if len(participants) < request.min_reactions:
-            await self._post_insufficient_reactions(
-                app, request.channel_id, request.message_ts,
-                len(participants), request.min_reactions
-            )
-            return
+        # Set Sentry context for this callback (runs asynchronously after initial scope)
+        with sentry_sdk.push_scope() as scope:
+            scope.set_tag("scheduling_mode", str(request.scheduling_mode))
+            scope.set_tag("channel_id", request.channel_id)
+            scope.set_tag("request_id", request.request_id)
+            scope.set_user({"id": request.initiator_user_id})
+            scope.set_context("meeting_request", {
+                "duration_minutes": request.duration_minutes,
+                "min_reactions": request.min_reactions,
+                "participant_count": len(participants),
+            })
 
-        # Get participant details
-        user_emails = await slack_utils.get_user_emails(app, participants)
-        user_timezones = {}
-        for user_id in participants:
-            tz = await slack_utils.get_user_timezone(app, user_id)
-            if tz:
-                user_timezones[user_id] = tz
-            else:
-                user_timezones[user_id] = "UTC"  # Fallback
-
-        # Map user IDs to emails for calendar operations
-        email_to_user_id = {email: user_id for user_id, email in user_emails.items()}
-
-        if not user_emails:
-            await self._post_error(
-                app, request.channel_id, request.message_ts,
-                "Could not retrieve email addresses for participants."
-            )
-            return
-
-        try:
-            # Branch based on scheduling mode
-            if request.scheduling_mode == SchedulingMode.SPECIFIC_TIME:
-                await self._schedule_specific_time(
-                    app, request, params, participants,
-                    user_emails, user_timezones
+            # Check minimum reactions
+            if len(participants) < request.min_reactions:
+                await self._post_insufficient_reactions(
+                    app, request.channel_id, request.message_ts,
+                    len(participants), request.min_reactions
                 )
-            else:
-                await self._schedule_find_availability(
-                    app, request, participants,
-                    user_emails, user_timezones, email_to_user_id
-                )
+                return
 
-        except Exception as e:
-            logger.error(f"Error scheduling meeting: {e}", exc_info=True)
-            # Capture exception in Sentry with context
-            sentry_sdk.capture_exception(e)
-            await self._post_error(
-                app, request.channel_id, request.message_ts,
-                f"Failed to schedule meeting: {str(e)}"
-            )
+            # Get participant details
+            user_emails = await slack_utils.get_user_emails(app, participants)
+            user_timezones = {}
+            for user_id in participants:
+                tz = await slack_utils.get_user_timezone(app, user_id)
+                if tz:
+                    user_timezones[user_id] = tz
+                else:
+                    user_timezones[user_id] = "UTC"  # Fallback
+
+            # Map user IDs to emails for calendar operations
+            email_to_user_id = {email: user_id for user_id, email in user_emails.items()}
+
+            if not user_emails:
+                await self._post_error(
+                    app, request.channel_id, request.message_ts,
+                    "Could not retrieve email addresses for participants."
+                )
+                return
+
+            try:
+                # Branch based on scheduling mode
+                if request.scheduling_mode == SchedulingMode.SPECIFIC_TIME:
+                    await self._schedule_specific_time(
+                        app, request, params, participants,
+                        user_emails, user_timezones
+                    )
+                else:
+                    await self._schedule_find_availability(
+                        app, request, participants,
+                        user_emails, user_timezones, email_to_user_id
+                    )
+
+            except Exception as e:
+                logger.error(f"Error scheduling meeting: {e}", exc_info=True)
+                # Capture exception in Sentry with context
+                sentry_sdk.capture_exception(e)
+                await self._post_error(
+                    app, request.channel_id, request.message_ts,
+                    f"Failed to schedule meeting: {str(e)}"
+                )
 
     async def _schedule_specific_time(
         self,
