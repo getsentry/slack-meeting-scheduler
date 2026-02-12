@@ -30,10 +30,10 @@ class AvailabilityChecker:
             num_days: Number of days to search
             duration_minutes: Meeting duration in minutes
             business_start: Business hours start time
-            business_end: Business hours end time
+            business_end: time
             slot_increment_minutes: Time between candidate slots (default: 30)
             reference_timezone: Timezone for interpreting business hours (e.g., "America/Los_Angeles").
-                               If not provided, uses start_date's timezone.
+                               REQUIRED - must be a valid pytz timezone string.
 
         Returns:
             List of candidate slot start times (UTC)
@@ -41,12 +41,15 @@ class AvailabilityChecker:
         if start_date.tzinfo is None:
             raise ValueError("start_date must be timezone-aware")
 
+        if not reference_timezone:
+            raise ValueError(
+                "reference_timezone is required. Cannot use start_date.tzinfo "
+                "as fallback because stdlib timezone objects lack localize() method."
+            )
+
         # Determine the timezone for business hours
         import pytz
-        if reference_timezone:
-            biz_tz = pytz.timezone(reference_timezone)
-        else:
-            biz_tz = start_date.tzinfo
+        biz_tz = pytz.timezone(reference_timezone)
 
         # Convert start_date to reference timezone to get the correct starting date
         start_date_local = start_date.astimezone(biz_tz)
@@ -58,7 +61,7 @@ class AvailabilityChecker:
         logger.info(
             f"Generating candidate slots from {current_date} to {end_date}, "
             f"duration={duration_minutes}m, increment={slot_increment_minutes}m, "
-            f"reference_tz={reference_timezone or 'start_date.tzinfo'}"
+            f"reference_tz={reference_timezone}"
         )
 
         while current_date < end_date:

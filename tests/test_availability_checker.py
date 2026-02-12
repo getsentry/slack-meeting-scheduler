@@ -18,7 +18,8 @@ class TestAvailabilityChecker:
             num_days=1,
             duration_minutes=30,
             business_start=business_hours["start"],
-            business_end=business_hours["end"]
+            business_end=business_hours["end"],
+            reference_timezone="America/Los_Angeles"
         )
 
         assert len(slots) > 0
@@ -37,7 +38,8 @@ class TestAvailabilityChecker:
             num_days=5,  # Friday through Tuesday
             duration_minutes=30,
             business_start=business_hours["start"],
-            business_end=business_hours["end"]
+            business_end=business_hours["end"],
+            reference_timezone="America/Los_Angeles"
         )
 
         # Convert slots back to check days
@@ -48,17 +50,21 @@ class TestAvailabilityChecker:
 
     def test_generate_candidate_slots_respects_business_hours(self, sample_datetime_utc, business_hours):
         """Test that slots are within business hours."""
+        reference_tz = "America/Los_Angeles"
         slots = AvailabilityChecker.generate_candidate_slots(
             start_date=sample_datetime_utc,
             num_days=2,
             duration_minutes=30,
             business_start=business_hours["start"],
-            business_end=business_hours["end"]
+            business_end=business_hours["end"],
+            reference_timezone=reference_tz
         )
 
+        # Convert to reference timezone to check business hours
+        pacific_tz = pytz.timezone(reference_tz)
         for slot in slots:
-            # Convert to same timezone as start_date to check
-            slot_in_tz = slot.astimezone(sample_datetime_utc.tzinfo)
+            # Convert to reference timezone to check
+            slot_in_tz = slot.astimezone(pacific_tz)
             slot_time = slot_in_tz.time()
 
             # Slot should start at or after business start
@@ -76,7 +82,8 @@ class TestAvailabilityChecker:
             duration_minutes=30,
             business_start=business_hours["start"],
             business_end=business_hours["end"],
-            slot_increment_minutes=30
+            slot_increment_minutes=30,
+            reference_timezone="America/Los_Angeles"
         )
 
         slots_60min = AvailabilityChecker.generate_candidate_slots(
@@ -85,7 +92,8 @@ class TestAvailabilityChecker:
             duration_minutes=30,
             business_start=business_hours["start"],
             business_end=business_hours["end"],
-            slot_increment_minutes=60
+            slot_increment_minutes=60,
+            reference_timezone="America/Los_Angeles"
         )
 
         # 60-minute increments should produce fewer slots
