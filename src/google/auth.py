@@ -63,37 +63,3 @@ class GoogleAuth:
                 self._credentials.refresh(Request())
 
         return self._credentials
-
-    def get_delegated_credentials(self, user_email: str):
-        """Get credentials with domain-wide delegation for a specific user.
-
-        Note: This requires domain-wide delegation to be enabled for the service account.
-              Only works with service account JSON, not Application Default Credentials.
-
-        Args:
-            user_email: Email of the user to impersonate
-
-        Returns:
-            Delegated service account credentials
-
-        Raises:
-            ValueError: If using Application Default Credentials (not supported for delegation)
-        """
-        if self._use_adc:
-            raise ValueError(
-                "Domain-wide delegation is not supported with Application Default Credentials. "
-                "Please provide service account JSON for delegation."
-            )
-
-        logger.debug(f"Creating delegated credentials for {user_email}")
-        credentials = service_account.Credentials.from_service_account_info(
-            self._service_account_info,
-            scopes=self.SCOPES,
-            subject=user_email
-        )
-
-        # Refresh if needed
-        if credentials.expired:
-            credentials.refresh(Request())
-
-        return credentials

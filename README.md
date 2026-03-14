@@ -22,7 +22,6 @@ A Slack app that schedules Google Meet meetings with reaction-based attendance t
 - Google Workspace account with:
   - Service account credentials
   - Calendar API enabled
-  - Domain-wide delegation (optional, for accessing user calendars)
 
 ## Setup Instructions
 
@@ -92,17 +91,7 @@ For local development, you need to create a service account JSON file:
    - Save the JSON file securely
 7. Set the path in your `.env` file: `GOOGLE_SERVICE_ACCOUNT_PATH=/path/to/service-account.json`
 
-**Optional - Domain-Wide Delegation** (for accessing user calendars):
-1. In the service account details, click "Show Domain-Wide Delegation"
-2. Enable "Domain-Wide Delegation"
-3. Go to your Google Workspace Admin Console
-4. Navigate to Security → API Controls → Domain-wide Delegation
-5. Add the service account Client ID
-6. Grant the following scopes:
-   - `https://www.googleapis.com/auth/calendar`
-   - `https://www.googleapis.com/auth/calendar.events`
-
-**Note**: Domain-wide delegation requires a service account JSON file and is not supported with Application Default Credentials.
+**Note**: The service account will be the organizer of all meetings. Calendar invites will come from the service account email (e.g., `PROJECT_ID-compute@developer.gserviceaccount.com`). The Calendar API allows querying freebusy information for all users in your Google Workspace domain without additional permissions.
 
 ### 5. Set Up Sentry (Optional but Recommended)
 
@@ -300,6 +289,8 @@ You can also mention the bot:
 5. **Create Event**: Creates Google Calendar event with Meet link
 6. **Send Invites**: Sends calendar invitations to all participants
 7. **Post Results**: Posts meeting details back to Slack
+
+**Note on Meeting Organizer**: The service account is the meeting organizer. Calendar invites are sent from the service account email (e.g., `PROJECT_ID-compute@developer.gserviceaccount.com`). All attendees receive invitations and can accept/decline normally. The bot can query freebusy information for all users in your Google Workspace domain without requiring additional permissions.
 
 ## Architecture
 
