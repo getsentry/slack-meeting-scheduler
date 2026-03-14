@@ -16,6 +16,32 @@ class SchedulingEngine:
     """Core scheduling engine with optimal time finding."""
 
     @staticmethod
+    def _get_local_values_across_timezones(
+        slot: datetime,
+        user_timezones: Dict[str, str],
+        extractor
+    ) -> List:
+        """Convert a UTC time slot to local times across multiple timezones and extract values.
+
+        Args:
+            slot: UTC datetime
+            user_timezones: Dictionary mapping user emails/IDs to timezone strings
+            extractor: Callable that takes a datetime and returns the value to extract
+
+        Returns:
+            List of extracted values (e.g., weekdays, hours)
+        """
+        local_values = []
+        for user_email, user_tz in user_timezones.items():
+            try:
+                local_time = TimezoneHandler.convert_to_timezone(slot, user_tz)
+                local_values.append(extractor(local_time))
+            except (ValueError, Exception) as e:
+                logger.debug(f"Could not convert to timezone {user_tz}: {e}")
+                continue
+        return local_values
+
+    @staticmethod
     def score_slot(
         slot: datetime,
         availability: Dict[str, bool],
@@ -51,14 +77,9 @@ class SchedulingEngine:
         # Day of week bonus (prefer earlier in week)
         # Calculate based on attendees' local time to avoid UTC conversion issues
         if user_timezones:
-            local_weekdays = []
-            for user_email, user_tz in user_timezones.items():
-                try:
-                    local_time = TimezoneHandler.convert_to_timezone(slot, user_tz)
-                    local_weekdays.append(local_time.weekday())
-                except (ValueError, Exception) as e:
-                    logger.debug(f"Could not convert to timezone {user_tz}: {e}")
-                    continue
+            local_weekdays = SchedulingEngine._get_local_values_across_timezones(
+                slot, user_timezones, lambda dt: dt.weekday()
+            )
 
             if local_weekdays:
                 # Use most common weekday (mode) to handle edge cases
@@ -78,14 +99,9 @@ class SchedulingEngine:
         # Time of day preferences based on attendees' local times
         # Calculate average local hour across all attendees for fair scoring
         if user_timezones:
-            local_hours = []
-            for user_email, user_tz in user_timezones.items():
-                try:
-                    local_time = TimezoneHandler.convert_to_timezone(slot, user_tz)
-                    local_hours.append(local_time.hour)
-                except (ValueError, Exception) as e:
-                    logger.debug(f"Could not convert to timezone {user_tz}: {e}")
-                    continue
+            local_hours = SchedulingEngine._get_local_values_across_timezones(
+                slot, user_timezones, lambda dt: dt.hour
+            )
 
             if local_hours:
                 avg_hour = sum(local_hours) / len(local_hours)

@@ -3,6 +3,7 @@
 import asyncio
 import logging
 import uuid
+from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Dict, List, Optional
 
@@ -13,6 +14,26 @@ from ..models import TimeSlot
 from .auth import GoogleAuth
 
 logger = logging.getLogger(__name__)
+
+
+@asynccontextmanager
+async def _handle_calendar_errors(operation: str):
+    """Context manager for handling Google Calendar API errors.
+
+    Args:
+        operation: Description of the operation being performed
+
+    Raises:
+        Exception: Re-raises exceptions with appropriate logging
+    """
+    try:
+        yield
+    except HttpError as e:
+        logger.error(f"HTTP error {operation}: {e}", exc_info=True)
+        raise Exception(f"Failed to {operation}: {e}")
+    except Exception as e:
+        logger.error(f"Error {operation}: {e}", exc_info=True)
+        raise
 
 
 class GoogleCalendarClient:
@@ -59,7 +80,7 @@ class GoogleCalendarClient:
             logger.warning("No email addresses provided for freebusy query")
             return {}
 
-        try:
+        async with _handle_calendar_errors("querying freebusy"):
             service = self._get_service()
 
             # Prepare request body
@@ -96,13 +117,6 @@ class GoogleCalendarClient:
 
             return busy_times
 
-        except HttpError as e:
-            logger.error(f"HTTP error querying freebusy: {e}", exc_info=True)
-            raise Exception(f"Failed to query calendar availability: {e}")
-        except Exception as e:
-            logger.error(f"Error querying freebusy: {e}", exc_info=True)
-            raise
-
     async def create_event(
         self,
         summary: str,
@@ -128,7 +142,7 @@ class GoogleCalendarClient:
         Raises:
             Exception: If event creation fails
         """
-        try:
+        async with _handle_calendar_errors("creating event"):
             service = self._get_service()
 
             # Prepare event body
@@ -185,13 +199,6 @@ class GoogleCalendarClient:
             )
 
             return created_event
-
-        except HttpError as e:
-            logger.error(f"HTTP error creating event: {e}", exc_info=True)
-            raise Exception(f"Failed to create calendar event: {e}")
-        except Exception as e:
-            logger.error(f"Error creating event: {e}", exc_info=True)
-            raise
 
     def get_meet_link(self, event: Dict) -> Optional[str]:
         """Extract Google Meet link from an event.

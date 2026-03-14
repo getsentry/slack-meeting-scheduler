@@ -26,6 +26,28 @@ class SlackUserCache:
 _user_cache = SlackUserCache()
 
 
+async def _fetch_user_info(app: AsyncApp, user_id: str) -> Optional[Dict]:
+    """Fetch user info from Slack API with error handling.
+
+    Args:
+        app: Slack AsyncApp instance
+        user_id: Slack user ID
+
+    Returns:
+        User info dictionary or None if failed
+    """
+    try:
+        result = await app.client.users_info(user=user_id)
+        if result.get("ok"):
+            return result.get("user", {})
+        else:
+            logger.warning(f"Failed to get user info for {user_id}: {result.get('error')}")
+    except Exception as e:
+        logger.error(f"Error fetching user info for {user_id}: {e}")
+
+    return None
+
+
 async def get_user_timezone(app: AsyncApp, user_id: str) -> Optional[str]:
     """Get a Slack user's timezone from their profile.
 
@@ -40,20 +62,14 @@ async def get_user_timezone(app: AsyncApp, user_id: str) -> Optional[str]:
     if user_id in _user_cache._timezone_cache:
         return _user_cache._timezone_cache[user_id]
 
-    try:
-        result = await app.client.users_info(user=user_id)
-        if result.get("ok"):
-            user = result.get("user", {})
-            timezone = user.get("tz")
-            if timezone:
-                # Cache the result
-                _user_cache._timezone_cache[user_id] = timezone
-                logger.debug(f"Retrieved timezone for user {user_id}: {timezone}")
-                return timezone
-        else:
-            logger.warning(f"Failed to get user info for {user_id}: {result.get('error')}")
-    except Exception as e:
-        logger.error(f"Error fetching timezone for user {user_id}: {e}")
+    user = await _fetch_user_info(app, user_id)
+    if user:
+        timezone = user.get("tz")
+        if timezone:
+            # Cache the result
+            _user_cache._timezone_cache[user_id] = timezone
+            logger.debug(f"Retrieved timezone for user {user_id}: {timezone}")
+            return timezone
 
     return None
 
@@ -72,21 +88,15 @@ async def get_user_email(app: AsyncApp, user_id: str) -> Optional[str]:
     if user_id in _user_cache._email_cache:
         return _user_cache._email_cache[user_id]
 
-    try:
-        result = await app.client.users_info(user=user_id)
-        if result.get("ok"):
-            user = result.get("user", {})
-            profile = user.get("profile", {})
-            email = profile.get("email")
-            if email:
-                # Cache the result
-                _user_cache._email_cache[user_id] = email
-                logger.debug(f"Retrieved email for user {user_id}")
-                return email
-        else:
-            logger.warning(f"Failed to get user info for {user_id}: {result.get('error')}")
-    except Exception as e:
-        logger.error(f"Error fetching email for user {user_id}: {e}")
+    user = await _fetch_user_info(app, user_id)
+    if user:
+        profile = user.get("profile", {})
+        email = profile.get("email")
+        if email:
+            # Cache the result
+            _user_cache._email_cache[user_id] = email
+            logger.debug(f"Retrieved email for user {user_id}")
+            return email
 
     return None
 
@@ -119,17 +129,13 @@ async def get_user_name(app: AsyncApp, user_id: str) -> str:
     Returns:
         User's display name or user ID if not found
     """
-    try:
-        result = await app.client.users_info(user=user_id)
-        if result.get("ok"):
-            user = result.get("user", {})
-            profile = user.get("profile", {})
-            # Try display_name first, fall back to real_name
-            name = profile.get("display_name") or profile.get("real_name") or user.get("name")
-            if name:
-                return name
-    except Exception as e:
-        logger.error(f"Error fetching name for user {user_id}: {e}")
+    user = await _fetch_user_info(app, user_id)
+    if user:
+        profile = user.get("profile", {})
+        # Try display_name first, fall back to real_name
+        name = profile.get("display_name") or profile.get("real_name") or user.get("name")
+        if name:
+            return name
 
     return user_id
 
