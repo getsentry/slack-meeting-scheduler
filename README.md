@@ -48,7 +48,6 @@ uv sync
 2. Click "Create New App" → "From an app manifest"
 3. Select your workspace
 4. Copy the contents of `slack-app-manifest.json` and paste it into the JSON tab
-   - Note: A YAML version is also available in `slack-app-manifest.yaml`
 5. Click "Create"
 6. Navigate to "Basic Information" and note your **App Token** (starts with `xapp-`)
 7. Navigate to "OAuth & Permissions" and click "Install to Workspace"
