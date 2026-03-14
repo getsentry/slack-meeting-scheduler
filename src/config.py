@@ -43,6 +43,9 @@ class Config(BaseSettings):
     # Availability Search Settings
     max_days_ahead: int = Field(14, description="Maximum days ahead to search for availability")
 
+    # Feature Flags
+    enable_find_time: bool = Field(False, description="Enable automatic time finding (disabled for MVP)")
+
     # Application Settings
     log_level: str = Field("INFO", description="Logging level")
 

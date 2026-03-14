@@ -19,8 +19,14 @@ class TestCommandParser:
         assert result.duration_minutes == 30  # default
         assert result.min_reactions == 1  # default
 
-    def test_parse_find_time(self):
+    def test_parse_find_time(self, monkeypatch):
         """Test parsing find-time command."""
+        # Enable find-time feature for this test via environment variable
+        monkeypatch.setenv('ENABLE_FIND_TIME', 'true')
+        # Clear the config singleton to force reload
+        import src.config
+        src.config._config = None
+
         result = CommandParser.parse("1h find-time")
 
         assert result.reaction_duration_seconds == 3600
@@ -29,8 +35,14 @@ class TestCommandParser:
         assert result.duration_minutes == 30  # default
         assert result.min_reactions == 1  # default
 
-    def test_parse_find_time_hyphenated(self):
+    def test_parse_find_time_hyphenated(self, monkeypatch):
         """Test parsing find-time with hyphen."""
+        # Enable find-time feature for this test via environment variable
+        monkeypatch.setenv('ENABLE_FIND_TIME', 'true')
+        # Clear the config singleton to force reload
+        import src.config
+        src.config._config = None
+
         result = CommandParser.parse("30m find-time")
 
         assert result.scheduling_mode == SchedulingMode.FIND_AVAILABILITY
@@ -141,8 +153,14 @@ class TestCommandParser:
 
         assert result1.reaction_duration_seconds == result2.reaction_duration_seconds
 
-    def test_parse_case_insensitive_find_time(self):
+    def test_parse_case_insensitive_find_time(self, monkeypatch):
         """Test that find-time parsing is case insensitive."""
+        # Enable find-time feature for this test via environment variable
+        monkeypatch.setenv('ENABLE_FIND_TIME', 'true')
+        # Clear the config singleton to force reload
+        import src.config
+        src.config._config = None
+
         result1 = CommandParser.parse("5m FIND-TIME")
         result2 = CommandParser.parse("5m find-time")
 
@@ -155,14 +173,29 @@ class TestCommandParser:
         assert result.duration_minutes == 60
         assert result.min_reactions == 3
 
-    def test_parse_find_time_with_params(self):
+    def test_parse_find_time_with_params(self, monkeypatch):
         """Test parsing find-time with parameters."""
+        # Enable find-time feature for this test via environment variable
+        monkeypatch.setenv('ENABLE_FIND_TIME', 'true')
+        # Clear the config singleton to force reload
+        import src.config
+        src.config._config = None
+
         result = CommandParser.parse("2h find-time duration:45m min:4")
 
         assert result.reaction_duration_seconds == 7200
         assert result.scheduling_mode == SchedulingMode.FIND_AVAILABILITY
         assert result.duration_minutes == 45
         assert result.min_reactions == 4
+
+    def test_parse_find_time_disabled(self):
+        """Test that find-time is rejected when feature flag is disabled."""
+        # Clear config singleton to ensure clean state
+        import src.config
+        src.config._config = None
+
+        with pytest.raises(ValueError, match="Automatic time finding is currently disabled"):
+            CommandParser.parse("5m find-time")
 
     def test_parse_extra_whitespace(self):
         """Test parsing with extra whitespace."""
@@ -173,11 +206,15 @@ class TestCommandParser:
 
     def test_get_help_message(self):
         """Test help message generation."""
+        # Clear config singleton to ensure clean state
+        import src.config
+        src.config._config = None
+
         help_msg = CommandParser.get_help_message()
 
         assert "Meeting Scheduler Help" in help_msg
         assert "/schedule-meet" in help_msg
-        assert "find-time" in help_msg
+        # Note: find-time is only shown if feature flag is enabled
         assert "duration:" in help_msg
         assert "min:" in help_msg
 

@@ -269,6 +269,8 @@ Find optimal availability:
 /schedule-meet 30m find-time min:2
 ```
 
+> **Note:** The `find-time` feature can be disabled for MVP deployments by setting `ENABLE_FIND_TIME=false` in your environment. When disabled, only specific time scheduling is available.
+
 **Parameters:**
 - **reaction-time** (required): How long to collect reactions
   - Format: `5m` (minutes), `1h` (hours), `30s` (seconds)
@@ -542,6 +544,7 @@ When deploying to Cloud Run, set these environment variables:
 - `BUSINESS_HOURS_START` - Business hours start time HH:MM (default: 09:00)
 - `BUSINESS_HOURS_END` - Business hours end time HH:MM (default: 17:00)
 - `MAX_DAYS_AHEAD` - Max days to search for availability (default: 14)
+- `ENABLE_FIND_TIME` - Enable automatic time finding feature (default: false, set to true to enable)
 
 **Not Needed:**
 - `GOOGLE_SERVICE_ACCOUNT_PATH` - Not needed on Cloud Run

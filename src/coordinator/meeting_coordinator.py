@@ -212,6 +212,14 @@ class MeetingCoordinator:
                         user_emails, user_timezones
                     )
                 else:
+                    # Check if find-time feature is enabled
+                    if not self._config.enable_find_time:
+                        await self._post_error(
+                            app, request.channel_id, request.message_ts,
+                            "Automatic time finding is currently disabled."
+                        )
+                        return
+
                     await self._schedule_find_availability(
                         app, request, participants,
                         user_emails, user_timezones

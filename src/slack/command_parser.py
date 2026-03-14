@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Optional
 
+from ..config import get_config
 from ..models import SchedulingMode
 
 logger = logging.getLogger(__name__)
@@ -87,6 +88,14 @@ class CommandParser:
         # 2. Check for find-time mode
         find_time_match = re.search(cls.FIND_TIME_PATTERN, text, re.IGNORECASE)
         if find_time_match:
+            # Check if find-time feature is enabled
+            config = get_config()
+            if not config.enable_find_time:
+                raise ValueError(
+                    "Automatic time finding is currently disabled. Please specify a date and time.\n"
+                    "Example: /schedule-meet 5m tomorrow 2pm"
+                )
+
             scheduling_mode = SchedulingMode.FIND_AVAILABILITY
             # Remove "find-time" from text
             text = text[:find_time_match.start()] + text[find_time_match.end():]
@@ -123,11 +132,14 @@ class CommandParser:
         # Validate specific datetime text
         if scheduling_mode == SchedulingMode.SPECIFIC_TIME:
             if not specific_datetime_text:
-                raise ValueError(
+                config = get_config()
+                error_msg = (
                     "Missing date/time for specific time scheduling.\n"
-                    "Example: /schedule-meet 5m tomorrow 2pm\n"
-                    "Or use 'find-time' to search for availability: /schedule-meet 5m find-time"
+                    "Example: /schedule-meet 5m tomorrow 2pm"
                 )
+                if config.enable_find_time:
+                    error_msg += "\nOr use 'find-time' to search for availability: /schedule-meet 5m find-time"
+                raise ValueError(error_msg)
 
         logger.info(
             f"Parsed command: reaction={reaction_duration_seconds}s, mode={scheduling_mode}, "
@@ -149,34 +161,51 @@ class CommandParser:
         Returns:
             Help message string
         """
-        return """*Meeting Scheduler Help*
+        config = get_config()
+
+        help_text = """*Meeting Scheduler Help*
 
 *Usage:*
-`/schedule-meet [reaction-time] [mode] [options]`
+`/schedule-meet [reaction-time] [date/time] [options]`
 
 *Reaction Time:* (required)
 How long to collect reactions before scheduling
 - Format: `5m`, `1h`, `30s` (minutes, hours, or seconds)
 
-*Scheduling Modes:*
-
-1. *Specific Time:* Schedule at a specific date/time
+*Scheduling:*
+Schedule at a specific date/time
    Example: `/schedule-meet 5m tomorrow 2pm`
    Example: `/schedule-meet 1h Jan 20 at 3:30pm`
-
-2. *Find Availability:* Find optimal time when most people are available
-   Example: `/schedule-meet 5m find-time`
-   Example: `/schedule-meet 1h find-time duration:60m`
 
 *Optional Parameters:*
 - `duration:Xm` - Meeting duration in minutes (default: 30)
 - `min:N` - Minimum reactions required (default: 1)
 
-*Full Examples:*
+*Examples:*
 - `/schedule-meet 5m tomorrow 2pm` - Schedule for tomorrow at 2pm, collect reactions for 5 minutes
-- `/schedule-meet 1h find-time min:3` - Find best time for 3+ people, collect reactions for 1 hour
 - `/schedule-meet 30m next Monday 10am duration:60m` - 60-minute meeting next Monday at 10am
-- `/schedule-meet 2h find-time duration:45m min:2` - Find 45-minute slot for 2+ people
+- `/schedule-meet 1h Friday 3pm min:3` - Meeting on Friday at 3pm, need 3+ people
 
 You can also mention the bot: `@MeetingBot 5m tomorrow 3pm`
 """
+
+        # Add find-time documentation only if feature is enabled
+        if config.enable_find_time:
+            help_text = help_text.replace(
+                "*Scheduling:*\nSchedule at a specific date/time",
+                """*Scheduling Modes:*
+
+1. *Specific Time:* Schedule at a specific date/time
+   Example: `/schedule-meet 5m tomorrow 2pm`
+
+2. *Find Availability:* Find optimal time when most people are available
+   Example: `/schedule-meet 5m find-time`"""
+            )
+            help_text = help_text.replace(
+                "- `/schedule-meet 1h Friday 3pm min:3` - Meeting on Friday at 3pm, need 3+ people",
+                """- `/schedule-meet 1h Friday 3pm min:3` - Meeting on Friday at 3pm, need 3+ people
+- `/schedule-meet 1h find-time min:3` - Find best time for 3+ people, collect reactions for 1 hour
+- `/schedule-meet 2h find-time duration:45m min:2` - Find 45-minute slot for 2+ people"""
+            )
+
+        return help_text
