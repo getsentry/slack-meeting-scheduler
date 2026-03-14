@@ -86,7 +86,7 @@ class MeetingCoordinator:
                 scheduling_mode=params.scheduling_mode,
                 duration_minutes=params.duration_minutes,
                 min_reactions=params.min_reactions,
-                created_at=datetime.utcnow(),
+                created_at=datetime.now(timezone.utc),
                 specific_datetime=None,
                 participants=[]
             )
