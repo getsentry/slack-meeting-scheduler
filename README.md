@@ -109,7 +109,53 @@ Sentry provides error tracking and performance monitoring for your application.
 - Email/Slack notifications for new errors
 - Error grouping and deduplication
 
-### 6. Configure Environment Variables
+### 6. Enable Automatic Meeting Recording (Optional)
+
+To automatically record all meetings created by the bot and make recordings accessible to your entire organization, you need to configure Google Workspace admin settings.
+
+**Prerequisites:**
+- Google Workspace Enterprise Standard, Enterprise Plus, or Education Plus
+- Google Workspace admin access
+
+**Setup Steps:**
+
+1. **Enable Recording in Google Admin Console**
+   - Go to [Google Admin Console](https://admin.google.com)
+   - Navigate to **Apps** → **Google Workspace** → **Google Meet**
+   - Click **Meet video settings**
+   - Scroll to **Recording** section
+   - Enable **"Let people record their meetings"**
+
+2. **Configure Auto-Recording for the Service Account**
+   - In the same **Recording** section
+   - Enable **"Automatically record meetings created by specific users or groups"**
+   - Add the service account email to the auto-record list:
+     - For Cloud Run: `PROJECT_ID-compute@developer.gserviceaccount.com`
+     - For local dev: Your service account email from the JSON file
+   - Click **Save**
+
+3. **Set Recording Permissions to Organization-Wide**
+   - Under **Recording**, configure:
+     - **"Who can access recordings"**: Set to **"People in my organization"**
+   - This ensures all org users can view recordings
+   - Click **Save**
+
+4. **Configure Drive Sharing Settings**
+   - Go to **Apps** → **Google Workspace** → **Drive and Docs**
+   - Navigate to **Sharing settings**
+   - Ensure organization-wide sharing is enabled for the service account's Drive
+
+**Important Notes:**
+- Recordings are stored in the service account's Google Drive
+- The service account Drive may need additional storage quota
+- Participants are notified when recording starts
+- Recordings are automatically available to all organization members after the meeting ends
+- Calendar events include a note that meetings will be recorded
+
+**Alternative: Manual Recording**
+If auto-recording is not configured, any meeting participant can manually click "Record" in Google Meet. The recording will be saved to the service account's Google Drive with the same organization-wide permissions.
+
+### 7. Configure Environment Variables
 
 Copy the example environment file:
 
@@ -152,7 +198,7 @@ SENTRY_PROFILES_SAMPLE_RATE=1.0
 
 **Note**: If you don't set `SENTRY_DSN`, the application will run normally without Sentry integration.
 
-### 7. Run the Application
+### 8. Run the Application
 
 ```bash
 # Using uv

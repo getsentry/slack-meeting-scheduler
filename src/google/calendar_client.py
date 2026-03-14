@@ -172,6 +172,10 @@ class GoogleCalendarClient:
                 # Send invitations to attendees
                 'guestsCanSeeOtherGuests': True,
                 'guestsCanInviteOthers': False,
+                # Make event visible to the entire organization
+                # This allows org-wide access to recordings when they're stored in Google Drive
+                'visibility': 'default',
+                'guestsCanModify': False,
             }
 
             logger.info(

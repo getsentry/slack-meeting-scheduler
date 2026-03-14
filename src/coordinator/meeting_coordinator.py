@@ -287,7 +287,11 @@ class MeetingCoordinator:
             start_time=start_time,
             end_time=end_time,
             attendee_emails=list(user_emails.values()),
-            description=f"Meeting scheduled via Slack by <@{request.initiator_user_id}>"
+            description=(
+                f"Meeting scheduled via Slack by <@{request.initiator_user_id}>\n\n"
+                "This meeting will be recorded automatically if configured in Google Workspace admin settings. "
+                "Recordings are available to all organization members."
+            )
         )
 
         # Extract links
@@ -369,7 +373,11 @@ class MeetingCoordinator:
             start_time=start_time,
             end_time=end_time,
             attendee_emails=list(user_emails.values()),
-            description=f"Meeting scheduled via Slack by <@{request.initiator_user_id}>"
+            description=(
+                f"Meeting scheduled via Slack by <@{request.initiator_user_id}>\n\n"
+                "This meeting will be recorded automatically if configured in Google Workspace admin settings. "
+                "Recordings are available to all organization members."
+            )
         )
 
         # Extract links
