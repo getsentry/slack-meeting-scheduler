@@ -35,6 +35,31 @@ class DateTimeParser:
             return None
 
         try:
+            # Preprocess text to handle dateparser limitations
+            processed_text = text.strip()
+
+            # Skip preprocessing for ISO format strings (e.g., "2026-01-20T15:00:00-08:00")
+            # ISO formats contain YYYY-MM-DD pattern
+            is_iso_format = len(processed_text) > 10 and processed_text[4] == '-' and processed_text[7] == '-'
+
+            if not is_iso_format:
+                # Handle time-only inputs (e.g., "2pm", "3:30pm")
+                # If text looks like just a time, prepend "today"
+                if processed_text and not any(word in processed_text.lower() for word in
+                    ['today', 'tomorrow', 'yesterday', 'monday', 'tuesday', 'wednesday',
+                     'thursday', 'friday', 'saturday', 'sunday', 'jan', 'feb', 'mar',
+                     'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec',
+                     'next', 'last', 'this']):
+                    # Check if it contains time indicators (am/pm or colon)
+                    if 'am' in processed_text.lower() or 'pm' in processed_text.lower() or ':' in processed_text:
+                        processed_text = f"today {processed_text}"
+                        logger.debug(f"Prepended 'today' to time-only input: {processed_text}")
+
+                # Handle "next <day>" by removing "next" (dateparser handles days better without it)
+                if processed_text.lower().startswith('next '):
+                    processed_text = processed_text[5:]
+                    logger.debug(f"Removed 'next' prefix: {processed_text}")
+
             # Configure dateparser settings
             settings = {
                 'TIMEZONE': timezone,
@@ -43,10 +68,10 @@ class DateTimeParser:
                 'RELATIVE_BASE': datetime.now(pytz.timezone(timezone)),
             }
 
-            logger.debug(f"Parsing '{text}' with timezone {timezone}")
+            logger.debug(f"Parsing '{processed_text}' (original: '{text}') with timezone {timezone}")
 
             # Parse the date/time
-            parsed_dt = dateparser.parse(text, settings=settings)
+            parsed_dt = dateparser.parse(processed_text, settings=settings)
 
             if parsed_dt is None:
                 logger.warning(f"Failed to parse date/time from: {text}")

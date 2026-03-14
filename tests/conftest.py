@@ -25,14 +25,30 @@ def eastern_tz():
 
 @pytest.fixture
 def sample_datetime_utc():
-    """Return a sample datetime in UTC (Jan 15, 2026 10:00 AM UTC)."""
-    return datetime(2026, 1, 15, 10, 0, 0, tzinfo=pytz.UTC)
+    """Return a sample datetime in UTC (next weekday at 10:00 AM UTC)."""
+    now = datetime.now(pytz.UTC)
+    # Start with tomorrow at 10:00 AM
+    future_date = now.replace(hour=10, minute=0, second=0, microsecond=0) + timedelta(days=1)
+
+    # Skip to next weekday if it's a weekend
+    while future_date.weekday() >= 5:  # 5=Saturday, 6=Sunday
+        future_date += timedelta(days=1)
+
+    return future_date
 
 
 @pytest.fixture
 def sample_datetime_pacific(pacific_tz):
-    """Return a sample datetime in Pacific timezone (Jan 15, 2026 10:00 AM PST)."""
-    return pacific_tz.localize(datetime(2026, 1, 15, 10, 0, 0))
+    """Return a sample datetime in Pacific timezone (next weekday at 10:00 AM PST/PDT)."""
+    now = datetime.now(pacific_tz)
+    # Start with tomorrow at 10:00 AM
+    future_date = now.replace(hour=10, minute=0, second=0, microsecond=0) + timedelta(days=1)
+
+    # Skip to next weekday if it's a weekend
+    while future_date.weekday() >= 5:  # 5=Saturday, 6=Sunday
+        future_date += timedelta(days=1)
+
+    return future_date
 
 
 @pytest.fixture
