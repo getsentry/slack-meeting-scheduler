@@ -47,13 +47,14 @@ uv sync
 1. Go to [api.slack.com/apps](https://api.slack.com/apps)
 2. Click "Create New App" → "From an app manifest"
 3. Select your workspace
-4. Copy the contents of `slack-app-manifest.yaml` and paste it
+4. Copy the contents of `slack-app-manifest.json` and paste it into the JSON tab
+   - Note: A YAML version is also available in `slack-app-manifest.yaml`
 5. Click "Create"
 6. Navigate to "Basic Information" and note your **App Token** (starts with `xapp-`)
 7. Navigate to "OAuth & Permissions" and click "Install to Workspace"
 8. Copy the **Bot User OAuth Token** (starts with `xoxb-`)
 
-**Important**: Make sure Socket Mode is enabled (Settings → Socket Mode → Enable)
+**Important**: Socket Mode is already enabled in the manifest. Verify it's enabled at Settings → Socket Mode.
 
 ### 4. Set Up Google Service Account
 

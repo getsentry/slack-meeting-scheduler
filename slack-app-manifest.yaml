@@ -13,7 +13,7 @@ features:
   slash_commands:
     - command: /schedule-meet
       description: Schedule a meeting with reaction-based attendance
-      usage_hint: "[reaction-time] [specific-time or find-time] [options]"
+      usage_hint: "[reaction-time] [specific-time] [options]"
 
 oauth_config:
   scopes:
