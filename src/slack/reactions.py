@@ -112,27 +112,29 @@ class ReactionTracker:
             message = result.get("message", {})
             reactions = message.get("reactions", [])
 
-            # Find the target emoji reactions
-            target_emoji = self._config.default_reaction_emoji
+            # Collect users from all reactions
             participants = []
+            seen_users = set()  # Track unique users
 
             for reaction in reactions:
-                if reaction.get("name") == target_emoji:
-                    users = reaction.get("users", [])
-                    # Filter out bots
-                    for user_id in users:
-                        # Check if user is a bot by fetching user info
-                        try:
-                            user_info = await app.client.users_info(user=user_id)
-                            if user_info.get("ok"):
-                                user = user_info.get("user", {})
-                                if not user.get("is_bot", False):
-                                    participants.append(user_id)
-                        except Exception as e:
-                            logger.warning(f"Failed to check if user {user_id} is bot: {e}")
-                            # Include user anyway if we can't determine
-                            participants.append(user_id)
-                    break
+                users = reaction.get("users", [])
+                # Filter out bots
+                for user_id in users:
+                    if user_id in seen_users:
+                        continue
+                    seen_users.add(user_id)
+
+                    # Check if user is a bot by fetching user info
+                    try:
+                        user_info = await app.client.users_info(user=user_id)
+                        if user_info.get("ok"):
+                            user = user_info.get("user", {})
+                            if not user.get("is_bot", False):
+                                participants.append(user_id)
+                    except Exception as e:
+                        logger.warning(f"Failed to check if user {user_id} is bot: {e}")
+                        # Include user anyway if we can't determine
+                        participants.append(user_id)
 
             logger.debug(f"Found {len(participants)} participants (non-bot users)")
             return participants
