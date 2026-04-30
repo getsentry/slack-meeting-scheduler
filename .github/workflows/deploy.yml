@@ -1,0 +1,69 @@
+name: Deploy
+permissions:
+  contents: read
+  id-token: write
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to ("prod" or "test")'
+        type: environment
+        default: test
+        required: true
+
+env:
+  IMAGE_REF: us-west1-docker.pkg.dev/${{ secrets.GCP_PROJECT_SLUG }}/slack-meeting-scheduler-docker/slack-meeting-scheduler:${{ github.sha }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+      - name: Authenticate with GCP
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_SLUG }}
+          workload_identity_provider: projects/${{ secrets.GCP_PROJECT_NUM }}/locations/global/workloadIdentityPools/github/providers/github-prvdr
+      - name: Login to Artifact Registry
+        run: gcloud auth configure-docker us-west1-docker.pkg.dev
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+      - name: Build and push
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          push: true
+          tags: ${{ env.IMAGE_REF }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    needs: [build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+      - name: Authenticate with GCP
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_SLUG }}
+          workload_identity_provider: projects/${{ secrets.GCP_PROJECT_NUM }}/locations/global/workloadIdentityPools/github/providers/github-prvdr
+      - name: deploy-test
+        if: ${{ inputs.environment == 'test' }}
+        uses: google-github-actions/deploy-cloudrun@2028e2d7d30a78c6910e0632e48dd561b064884d # v3
+        with:
+          service: slack-meeting-scheduler-test
+          project_id: ${{ secrets.GCP_PROJECT_SLUG }}
+          region: us-west1
+          image: ${{ env.IMAGE_REF }}
+      - name: deploy-prod
+        if: ${{ github.ref == 'refs/heads/main' && ((!inputs.environment) || inputs.environment == 'prod') }}
+        uses: google-github-actions/deploy-cloudrun@2028e2d7d30a78c6910e0632e48dd561b064884d # v3
+        with:
+          service: slack-meeting-scheduler
+          project_id: ${{ secrets.GCP_PROJECT_SLUG }}
+          region: us-west1
+          image: ${{ env.IMAGE_REF }}
