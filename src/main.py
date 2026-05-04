@@ -7,10 +7,12 @@ import sys
 import sentry_sdk
 from sentry_sdk.integrations.logging import LoggingIntegration
 
+from . import health
 from .config import get_config
 from .coordinator.meeting_coordinator import MeetingCoordinator
 from .slack.app import create_slack_app
 from .slack.handlers import register_handlers
+
 
 # Setup Sentry
 def setup_sentry(config):
@@ -25,7 +27,7 @@ def setup_sentry(config):
     # Configure logging integration
     sentry_logging = LoggingIntegration(
         level=logging.INFO,  # Capture info and above as breadcrumbs
-        event_level=logging.ERROR  # Send errors as events
+        event_level=logging.ERROR,  # Send errors as events
     )
 
     sentry_sdk.init(
@@ -56,17 +58,15 @@ def setup_logging(log_level: str):
 
     logging.basicConfig(
         level=numeric_level,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        handlers=[
-            logging.StreamHandler(sys.stdout)
-        ]
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        handlers=[logging.StreamHandler(sys.stdout)],
     )
 
     # Reduce noise from external libraries
-    logging.getLogger('slack_bolt').setLevel(logging.WARNING)
-    logging.getLogger('slack_sdk').setLevel(logging.WARNING)
-    logging.getLogger('googleapiclient').setLevel(logging.WARNING)
-    logging.getLogger('google.auth').setLevel(logging.WARNING)
+    logging.getLogger("slack_bolt").setLevel(logging.WARNING)
+    logging.getLogger("slack_sdk").setLevel(logging.WARNING)
+    logging.getLogger("googleapiclient").setLevel(logging.WARNING)
+    logging.getLogger("google.auth").setLevel(logging.WARNING)
 
 
 async def main():
@@ -88,13 +88,17 @@ async def main():
     setup_sentry(config)
 
     logger.info("Starting Meeting Scheduler application")
-    logger.info(f"Configuration: duration={config.default_meeting_duration}m, "
-                f"min_reactions={config.min_reactions}, "
-                f"business_hours={config.business_hours_start}-{config.business_hours_end}")
+    logger.info(
+        f"Configuration: duration={config.default_meeting_duration}m, "
+        f"min_reactions={config.min_reactions}, "
+        f"business_hours={config.business_hours_start}-{config.business_hours_end}"
+    )
 
     # Validate Slack tokens are present
     if not config.slack_bot_token or not config.slack_app_token:
-        logger.error("Missing Slack tokens. Set SLACK_BOT_TOKEN and SLACK_APP_TOKEN in .env")
+        logger.error(
+            "Missing Slack tokens. Set SLACK_BOT_TOKEN and SLACK_APP_TOKEN in .env"
+        )
         print("\nError: Missing Slack configuration")
         print("For Slack integration, set SLACK_BOT_TOKEN and SLACK_APP_TOKEN in .env")
         print("For CLI testing without Slack, use: python -m src.cli")
@@ -116,6 +120,8 @@ async def main():
         from slack_bolt.adapter.socket_mode.async_handler import AsyncSocketModeHandler
 
         handler = AsyncSocketModeHandler(app, config.slack_app_token)
+        health.set_handler(handler)
+        health.start()
         await handler.start_async()
     except KeyboardInterrupt:
         logger.info("Received keyboard interrupt, shutting down...")
