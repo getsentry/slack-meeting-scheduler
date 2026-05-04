@@ -101,6 +101,14 @@ class GoogleCalendarClient:
             busy_times: Dict[str, List[TimeSlot]] = {}
 
             for email, calendar_data in calendars.items():
+                errors = calendar_data.get("errors")
+                if errors:
+                    logger.warning(
+                        f"FreeBusy errors for {email}: {errors} "
+                        "-- treating as unavailable"
+                    )
+                    continue
+
                 busy_periods = calendar_data.get("busy", [])
                 time_slots = []
 
