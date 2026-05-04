@@ -2,7 +2,7 @@
 
 import logging
 from collections import Counter
-from datetime import datetime, time, timedelta
+from datetime import datetime, time
 from typing import Dict, List, Optional, Tuple
 
 from ..models import TimeSlot
@@ -17,9 +17,7 @@ class SchedulingEngine:
 
     @staticmethod
     def _get_local_values_across_timezones(
-        slot: datetime,
-        user_timezones: Dict[str, str],
-        extractor
+        slot: datetime, user_timezones: Dict[str, str], extractor
     ) -> List:
         """Convert a UTC time slot to local times across multiple timezones and extract values.
 
@@ -46,7 +44,7 @@ class SchedulingEngine:
         slot: datetime,
         availability: Dict[str, bool],
         min_attendees: int,
-        user_timezones: Optional[Dict[str, str]] = None
+        user_timezones: Optional[Dict[str, str]] = None,
     ) -> Optional[int]:
         """Score a time slot based on availability and time preferences.
 
@@ -139,7 +137,7 @@ class SchedulingEngine:
         freebusy_data: Dict[str, List[TimeSlot]],
         user_timezones: Dict[str, str],
         min_attendees: int = 1,
-        reference_timezone: str = None
+        reference_timezone: str = None,
     ) -> Optional[Tuple[datetime, Dict[str, bool], int]]:
         """Find optimal meeting time using scored ranking.
 
@@ -182,7 +180,7 @@ class SchedulingEngine:
             duration_minutes=duration_minutes,
             business_start=business_start,
             business_end=business_end,
-            reference_timezone=ref_tz
+            reference_timezone=ref_tz,
         )
 
         if not candidates:
@@ -195,7 +193,7 @@ class SchedulingEngine:
             user_timezones=user_timezones,
             business_start=business_start,
             business_end=business_end,
-            duration_minutes=duration_minutes
+            duration_minutes=duration_minutes,
         )
 
         if not valid_candidates:
@@ -212,7 +210,7 @@ class SchedulingEngine:
             availability = AvailabilityChecker.check_availability(
                 slot_start=slot,
                 duration_minutes=duration_minutes,
-                freebusy_data=freebusy_data
+                freebusy_data=freebusy_data,
             )
 
             # Score the slot
@@ -220,7 +218,7 @@ class SchedulingEngine:
                 slot=slot,
                 availability=availability,
                 min_attendees=min_attendees,
-                user_timezones=user_timezones
+                user_timezones=user_timezones,
             )
 
             # Track best slot
@@ -247,8 +245,7 @@ class SchedulingEngine:
 
     @staticmethod
     def format_availability_summary(
-        availability: Dict[str, bool],
-        user_names: Dict[str, str]
+        availability: Dict[str, bool], user_names: Dict[str, str]
     ) -> str:
         """Format availability dictionary as a human-readable summary.
 
@@ -272,9 +269,13 @@ class SchedulingEngine:
         summary_parts = []
 
         if available:
-            summary_parts.append(f"*Available ({len(available)}):* {', '.join(available)}")
+            summary_parts.append(
+                f"*Available ({len(available)}):* {', '.join(available)}"
+            )
 
         if unavailable:
-            summary_parts.append(f"*Unavailable ({len(unavailable)}):* {', '.join(unavailable)}")
+            summary_parts.append(
+                f"*Unavailable ({len(unavailable)}):* {', '.join(unavailable)}"
+            )
 
         return "\n".join(summary_parts)

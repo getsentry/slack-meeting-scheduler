@@ -20,12 +20,7 @@ class ReactionTracker:
         self._active_requests: Dict[str, MeetingRequest] = {}
         self._config = get_config()
 
-    async def start_tracking(
-        self,
-        request: MeetingRequest,
-        app: AsyncApp,
-        callback
-    ):
+    async def start_tracking(self, request: MeetingRequest, app: AsyncApp, callback):
         """Start tracking reactions for a meeting request.
 
         Args:
@@ -48,7 +43,7 @@ class ReactionTracker:
             await app.client.reactions_add(
                 channel=request.channel_id,
                 timestamp=request.message_ts,
-                name=self._config.default_reaction_emoji
+                name=self._config.default_reaction_emoji,
             )
         except Exception as e:
             logger.warning(f"Failed to add initial reaction: {e}")
@@ -59,9 +54,7 @@ class ReactionTracker:
         # Collect reactions
         try:
             participants = await self.get_participants(
-                app,
-                request.channel_id,
-                request.message_ts
+                app, request.channel_id, request.message_ts
             )
 
             logger.info(
@@ -76,17 +69,17 @@ class ReactionTracker:
             await callback(request, participants)
 
         except Exception as e:
-            logger.error(f"Error collecting reactions for request {request.request_id}: {e}", exc_info=True)
+            logger.error(
+                f"Error collecting reactions for request {request.request_id}: {e}",
+                exc_info=True,
+            )
             # Still remove from active requests
         finally:
             # Remove from active requests
             self._active_requests.pop(key, None)
 
     async def get_participants(
-        self,
-        app: AsyncApp,
-        channel_id: str,
-        message_ts: str
+        self, app: AsyncApp, channel_id: str, message_ts: str
     ) -> List[str]:
         """Get list of user IDs who reacted to the message.
 
@@ -101,8 +94,7 @@ class ReactionTracker:
         try:
             # Get reactions on the message
             result = await app.client.reactions_get(
-                channel=channel_id,
-                timestamp=message_ts
+                channel=channel_id, timestamp=message_ts
             )
 
             if not result.get("ok"):

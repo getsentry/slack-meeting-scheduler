@@ -21,7 +21,7 @@ class AvailabilityChecker:
         business_start: time,
         business_end: time,
         slot_increment_minutes: int = 30,
-        reference_timezone: str = None
+        reference_timezone: str = None,
     ) -> List[datetime]:
         """Generate candidate time slots during business hours.
 
@@ -49,6 +49,7 @@ class AvailabilityChecker:
 
         # Determine the timezone for business hours
         import pytz
+
         biz_tz = pytz.timezone(reference_timezone)
 
         # Convert start_date to reference timezone to get the correct starting date
@@ -98,7 +99,7 @@ class AvailabilityChecker:
     def check_availability(
         slot_start: datetime,
         duration_minutes: int,
-        freebusy_data: Dict[str, List[TimeSlot]]
+        freebusy_data: Dict[str, List[TimeSlot]],
     ) -> Dict[str, bool]:
         """Check who is available for a specific time slot.
 
@@ -142,7 +143,7 @@ class AvailabilityChecker:
         user_timezones: Dict[str, str],
         business_start: time,
         business_end: time,
-        duration_minutes: int = 0
+        duration_minutes: int = 0,
     ) -> List[datetime]:
         """Filter slots to ensure they're within business hours for ALL users.
 
@@ -165,7 +166,11 @@ class AvailabilityChecker:
         for slot in slots:
             # Check if slot is within business hours for ALL users
             valid_for_all = True
-            slot_end = slot + timedelta(minutes=duration_minutes) if duration_minutes > 0 else None
+            slot_end = (
+                slot + timedelta(minutes=duration_minutes)
+                if duration_minutes > 0
+                else None
+            )
 
             for user_id, user_tz in user_timezones.items():
                 # Check start time is within business hours
@@ -179,8 +184,11 @@ class AvailabilityChecker:
                     break
 
                 # Check end time is within business hours (if duration provided)
-                if slot_end is not None and not TimezoneHandler.is_within_business_hours(
-                    slot_end, business_start, business_end, timezone=user_tz
+                if (
+                    slot_end is not None
+                    and not TimezoneHandler.is_within_business_hours(
+                        slot_end, business_start, business_end, timezone=user_tz
+                    )
                 ):
                     logger.debug(
                         f"Slot {slot.isoformat()} end ({slot_end.isoformat()}) not in business hours for {user_id} ({user_tz})"
@@ -202,7 +210,7 @@ class AvailabilityChecker:
         slots: List[datetime],
         duration_minutes: int,
         freebusy_data: Dict[str, List[TimeSlot]],
-        min_attendees: int = 1
+        min_attendees: int = 1,
     ) -> tuple[datetime, Dict[str, bool]] | None:
         """Find the earliest slot where enough people are available.
 

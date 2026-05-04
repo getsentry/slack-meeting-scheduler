@@ -1,8 +1,6 @@
 """Tests for data models."""
 
-import pytest
-from datetime import datetime, timedelta
-import pytz
+from datetime import timedelta
 
 from src.models import TimeSlot, SchedulingMode, MeetingRequest
 
@@ -13,12 +11,11 @@ class TestTimeSlot:
     def test_overlaps_full_overlap(self, sample_datetime_utc):
         """Test overlapping time slots."""
         slot1 = TimeSlot(
-            start=sample_datetime_utc,
-            end=sample_datetime_utc + timedelta(hours=1)
+            start=sample_datetime_utc, end=sample_datetime_utc + timedelta(hours=1)
         )
         slot2 = TimeSlot(
             start=sample_datetime_utc + timedelta(minutes=30),
-            end=sample_datetime_utc + timedelta(hours=1, minutes=30)
+            end=sample_datetime_utc + timedelta(hours=1, minutes=30),
         )
         assert slot1.overlaps(slot2)
         assert slot2.overlaps(slot1)
@@ -26,12 +23,11 @@ class TestTimeSlot:
     def test_overlaps_no_overlap(self, sample_datetime_utc):
         """Test non-overlapping time slots."""
         slot1 = TimeSlot(
-            start=sample_datetime_utc,
-            end=sample_datetime_utc + timedelta(hours=1)
+            start=sample_datetime_utc, end=sample_datetime_utc + timedelta(hours=1)
         )
         slot2 = TimeSlot(
             start=sample_datetime_utc + timedelta(hours=2),
-            end=sample_datetime_utc + timedelta(hours=3)
+            end=sample_datetime_utc + timedelta(hours=3),
         )
         assert not slot1.overlaps(slot2)
         assert not slot2.overlaps(slot1)
@@ -39,12 +35,11 @@ class TestTimeSlot:
     def test_overlaps_adjacent(self, sample_datetime_utc):
         """Test adjacent time slots (should not overlap)."""
         slot1 = TimeSlot(
-            start=sample_datetime_utc,
-            end=sample_datetime_utc + timedelta(hours=1)
+            start=sample_datetime_utc, end=sample_datetime_utc + timedelta(hours=1)
         )
         slot2 = TimeSlot(
             start=sample_datetime_utc + timedelta(hours=1),
-            end=sample_datetime_utc + timedelta(hours=2)
+            end=sample_datetime_utc + timedelta(hours=2),
         )
         assert not slot1.overlaps(slot2)
         assert not slot2.overlaps(slot1)
@@ -52,12 +47,11 @@ class TestTimeSlot:
     def test_overlaps_containment(self, sample_datetime_utc):
         """Test when one slot contains another."""
         slot1 = TimeSlot(
-            start=sample_datetime_utc,
-            end=sample_datetime_utc + timedelta(hours=2)
+            start=sample_datetime_utc, end=sample_datetime_utc + timedelta(hours=2)
         )
         slot2 = TimeSlot(
             start=sample_datetime_utc + timedelta(minutes=30),
-            end=sample_datetime_utc + timedelta(hours=1)
+            end=sample_datetime_utc + timedelta(hours=1),
         )
         assert slot1.overlaps(slot2)
         assert slot2.overlaps(slot1)
@@ -65,8 +59,7 @@ class TestTimeSlot:
     def test_contains_datetime_inside(self, sample_datetime_utc):
         """Test datetime within time slot."""
         slot = TimeSlot(
-            start=sample_datetime_utc,
-            end=sample_datetime_utc + timedelta(hours=1)
+            start=sample_datetime_utc, end=sample_datetime_utc + timedelta(hours=1)
         )
         dt = sample_datetime_utc + timedelta(minutes=30)
         assert slot.contains(dt)
@@ -74,8 +67,7 @@ class TestTimeSlot:
     def test_contains_datetime_outside(self, sample_datetime_utc):
         """Test datetime outside time slot."""
         slot = TimeSlot(
-            start=sample_datetime_utc,
-            end=sample_datetime_utc + timedelta(hours=1)
+            start=sample_datetime_utc, end=sample_datetime_utc + timedelta(hours=1)
         )
         dt = sample_datetime_utc + timedelta(hours=2)
         assert not slot.contains(dt)
@@ -83,16 +75,14 @@ class TestTimeSlot:
     def test_contains_datetime_at_start(self, sample_datetime_utc):
         """Test datetime at start boundary."""
         slot = TimeSlot(
-            start=sample_datetime_utc,
-            end=sample_datetime_utc + timedelta(hours=1)
+            start=sample_datetime_utc, end=sample_datetime_utc + timedelta(hours=1)
         )
         assert slot.contains(sample_datetime_utc)
 
     def test_contains_datetime_at_end(self, sample_datetime_utc):
         """Test datetime at end boundary (should not contain)."""
         slot = TimeSlot(
-            start=sample_datetime_utc,
-            end=sample_datetime_utc + timedelta(hours=1)
+            start=sample_datetime_utc, end=sample_datetime_utc + timedelta(hours=1)
         )
         dt = sample_datetime_utc + timedelta(hours=1)
         assert not slot.contains(dt)
@@ -101,15 +91,14 @@ class TestTimeSlot:
         """Test duration calculation."""
         slot = TimeSlot(
             start=sample_datetime_utc,
-            end=sample_datetime_utc + timedelta(hours=1, minutes=30)
+            end=sample_datetime_utc + timedelta(hours=1, minutes=30),
         )
         assert slot.duration_minutes() == 90
 
     def test_str_representation(self, sample_datetime_utc):
         """Test string representation."""
         slot = TimeSlot(
-            start=sample_datetime_utc,
-            end=sample_datetime_utc + timedelta(hours=1)
+            start=sample_datetime_utc, end=sample_datetime_utc + timedelta(hours=1)
         )
         str_repr = str(slot)
         assert sample_datetime_utc.isoformat() in str_repr
@@ -146,7 +135,7 @@ class TestMeetingRequest:
             scheduling_mode=SchedulingMode.SPECIFIC_TIME,
             duration_minutes=30,
             min_reactions=1,
-            created_at=sample_datetime_utc
+            created_at=sample_datetime_utc,
         )
         assert request.request_id == "test-123"
         assert request.participants == []
@@ -165,7 +154,7 @@ class TestMeetingRequest:
             duration_minutes=60,
             min_reactions=2,
             created_at=sample_datetime_utc,
-            participants=participants
+            participants=participants,
         )
         assert len(request.participants) == 2
         assert "user1@example.com" in request.participants
@@ -183,7 +172,7 @@ class TestMeetingRequest:
             duration_minutes=30,
             min_reactions=1,
             created_at=sample_datetime_utc,
-            specific_datetime=specific_time
+            specific_datetime=specific_time,
         )
         assert request.specific_datetime == specific_time
 
@@ -199,7 +188,7 @@ class TestMeetingRequest:
             duration_minutes=30,
             min_reactions=1,
             created_at=sample_datetime_utc,
-            participants=["user1@example.com", "user2@example.com"]
+            participants=["user1@example.com", "user2@example.com"],
         )
         str_repr = str(request)
         assert "test-123" in str_repr
@@ -219,7 +208,7 @@ class TestMeetingRequest:
             duration_minutes=45,
             min_reactions=3,
             created_at=sample_datetime_utc,
-            participants=["user1@example.com"]
+            participants=["user1@example.com"],
         )
         str_repr = str(request)
         assert "test-456" in str_repr

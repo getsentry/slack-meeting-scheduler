@@ -1,6 +1,5 @@
 """Tests for DateTimeParser."""
 
-import pytest
 from datetime import datetime, timedelta
 import pytz
 
@@ -29,7 +28,9 @@ class TestDateTimeParser:
 
     def test_parse_specific_date(self):
         """Test parsing specific date."""
-        result = DateTimeParser.parse("January 20 2026 at 3pm", timezone="America/Los_Angeles")
+        result = DateTimeParser.parse(
+            "January 20 2026 at 3pm", timezone="America/Los_Angeles"
+        )
 
         assert result is not None
         assert result.year == 2026
@@ -87,9 +88,7 @@ class TestDateTimeParser:
     def test_parse_prefer_future(self, pacific_tz):
         """Test that parse prefers future dates."""
         result = DateTimeParser.parse(
-            "Monday 10am",
-            timezone="America/Los_Angeles",
-            prefer_dates_from="future"
+            "Monday 10am", timezone="America/Los_Angeles", prefer_dates_from="future"
         )
 
         assert result is not None
@@ -98,7 +97,9 @@ class TestDateTimeParser:
 
     def test_parse_with_fallback_future_preference(self):
         """Test parse_with_fallback with future preference."""
-        result = DateTimeParser.parse_with_fallback("tomorrow 2pm", timezone="America/Los_Angeles")
+        result = DateTimeParser.parse_with_fallback(
+            "tomorrow 2pm", timezone="America/Los_Angeles"
+        )
 
         assert result is not None
         assert result.tzinfo is not None
@@ -112,7 +113,9 @@ class TestDateTimeParser:
     def test_parse_with_fallback_iso_format(self):
         """Test parse_with_fallback with ISO format."""
         iso_string = "2026-01-20T15:00:00-08:00"
-        result = DateTimeParser.parse_with_fallback(iso_string, timezone="America/Los_Angeles")
+        result = DateTimeParser.parse_with_fallback(
+            iso_string, timezone="America/Los_Angeles"
+        )
 
         assert result is not None
         assert result.year == 2026
@@ -130,7 +133,9 @@ class TestDateTimeParser:
 
     def test_parse_with_fallback_invalid_returns_none(self):
         """Test parse_with_fallback returns None for invalid input."""
-        result = DateTimeParser.parse_with_fallback("completely invalid text", timezone="UTC")
+        result = DateTimeParser.parse_with_fallback(
+            "completely invalid text", timezone="UTC"
+        )
 
         assert result is None
 
@@ -148,7 +153,9 @@ class TestDateTimeParser:
         now = datetime.now(pytz.UTC)
         near_future = now + timedelta(minutes=2)
 
-        result = DateTimeParser.validate_future_datetime(near_future, min_minutes_ahead=5)
+        result = DateTimeParser.validate_future_datetime(
+            near_future, min_minutes_ahead=5
+        )
 
         assert result is False
 
@@ -173,10 +180,14 @@ class TestDateTimeParser:
         now = datetime.now(pytz.UTC)
         future_dt = now + timedelta(minutes=15)
 
-        result = DateTimeParser.validate_future_datetime(future_dt, min_minutes_ahead=10)
+        result = DateTimeParser.validate_future_datetime(
+            future_dt, min_minutes_ahead=10
+        )
         assert result is True
 
-        result = DateTimeParser.validate_future_datetime(future_dt, min_minutes_ahead=20)
+        result = DateTimeParser.validate_future_datetime(
+            future_dt, min_minutes_ahead=20
+        )
         assert result is False
 
     def test_parse_time_with_am_pm(self):

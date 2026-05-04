@@ -3,7 +3,6 @@
 import logging
 import re
 from dataclasses import dataclass
-from datetime import datetime
 from typing import Optional
 
 from ..config import get_config
@@ -27,13 +26,15 @@ class CommandParser:
     """Parser for slash command and mention text."""
 
     # Regex patterns
-    DURATION_PATTERN = r'^(\d+)([smh])(?:\s+|$)'  # e.g., "5m", "1h", "30s"
-    FIND_TIME_PATTERN = r'\bfind-?time\b'
-    DURATION_PARAM_PATTERN = r'\bduration:(\d+)m?\b'
-    MIN_PARAM_PATTERN = r'\bmin:(\d+)\b'
+    DURATION_PATTERN = r"^(\d+)([smh])(?:\s+|$)"  # e.g., "5m", "1h", "30s"
+    FIND_TIME_PATTERN = r"\bfind-?time\b"
+    DURATION_PARAM_PATTERN = r"\bduration:(\d+)m?\b"
+    MIN_PARAM_PATTERN = r"\bmin:(\d+)\b"
 
     @classmethod
-    def parse(cls, command_text: str, default_duration: int = 30, default_min: int = 1) -> CommandParameters:
+    def parse(
+        cls, command_text: str, default_duration: int = 30, default_min: int = 1
+    ) -> CommandParameters:
         """Parse command text into structured parameters.
 
         Command format:
@@ -73,17 +74,17 @@ class CommandParser:
         unit = duration_match.group(2).lower()
 
         # Convert to seconds
-        if unit == 's':
+        if unit == "s":
             reaction_duration_seconds = value
-        elif unit == 'm':
+        elif unit == "m":
             reaction_duration_seconds = value * 60
-        elif unit == 'h':
+        elif unit == "h":
             reaction_duration_seconds = value * 3600
         else:
             raise ValueError(f"Invalid duration unit: {unit}")
 
         # Remove the reaction duration from the text
-        text = text[duration_match.end():].strip()
+        text = text[duration_match.end() :].strip()
 
         # 2. Check for find-time mode
         find_time_match = re.search(cls.FIND_TIME_PATTERN, text, re.IGNORECASE)
@@ -98,7 +99,7 @@ class CommandParser:
 
             scheduling_mode = SchedulingMode.FIND_AVAILABILITY
             # Remove "find-time" from text
-            text = text[:find_time_match.start()] + text[find_time_match.end():]
+            text = text[: find_time_match.start()] + text[find_time_match.end() :]
             text = text.strip()
             specific_datetime_text = None
         else:
@@ -108,12 +109,16 @@ class CommandParser:
 
         # 3. Extract optional parameters
         duration_minutes = None
-        duration_param_match = re.search(cls.DURATION_PARAM_PATTERN, text, re.IGNORECASE)
+        duration_param_match = re.search(
+            cls.DURATION_PARAM_PATTERN, text, re.IGNORECASE
+        )
         if duration_param_match:
             duration_minutes = int(duration_param_match.group(1))
             # Remove from specific_datetime_text if it was set
             if specific_datetime_text:
-                specific_datetime_text = specific_datetime_text.replace(duration_param_match.group(0), '').strip()
+                specific_datetime_text = specific_datetime_text.replace(
+                    duration_param_match.group(0), ""
+                ).strip()
 
         min_reactions = None
         min_param_match = re.search(cls.MIN_PARAM_PATTERN, text, re.IGNORECASE)
@@ -121,7 +126,9 @@ class CommandParser:
             min_reactions = int(min_param_match.group(1))
             # Remove from specific_datetime_text if it was set
             if specific_datetime_text:
-                specific_datetime_text = specific_datetime_text.replace(min_param_match.group(0), '').strip()
+                specific_datetime_text = specific_datetime_text.replace(
+                    min_param_match.group(0), ""
+                ).strip()
 
         # Apply defaults
         if duration_minutes is None:
@@ -199,13 +206,13 @@ You can also mention the bot: `@MeetingBot 5m tomorrow 3pm`
    Example: `/schedule-meet 5m tomorrow 2pm`
 
 2. *Find Availability:* Find optimal time when most people are available
-   Example: `/schedule-meet 5m find-time`"""
+   Example: `/schedule-meet 5m find-time`""",
             )
             help_text = help_text.replace(
                 "- `/schedule-meet 1h Friday 3pm min:3` - Meeting on Friday at 3pm, need 3+ people",
                 """- `/schedule-meet 1h Friday 3pm min:3` - Meeting on Friday at 3pm, need 3+ people
 - `/schedule-meet 1h find-time min:3` - Find best time for 3+ people, collect reactions for 1 hour
-- `/schedule-meet 2h find-time duration:45m min:2` - Find 45-minute slot for 2+ people"""
+- `/schedule-meet 2h find-time duration:45m min:2` - Find 45-minute slot for 2+ people""",
             )
 
         return help_text

@@ -56,15 +56,12 @@ class GoogleCalendarClient:
         """
         if self._service is None:
             credentials = self._auth.get_credentials()
-            self._service = build('calendar', 'v3', credentials=credentials)
+            self._service = build("calendar", "v3", credentials=credentials)
             logger.debug("Calendar API service created")
         return self._service
 
     async def get_freebusy(
-        self,
-        email_addresses: List[str],
-        time_min: datetime,
-        time_max: datetime
+        self, email_addresses: List[str], time_min: datetime, time_max: datetime
     ) -> Dict[str, List[TimeSlot]]:
         """Query freebusy information for multiple calendars.
 
@@ -87,7 +84,7 @@ class GoogleCalendarClient:
             body = {
                 "timeMin": time_min.isoformat(),
                 "timeMax": time_max.isoformat(),
-                "items": [{"id": email} for email in email_addresses]
+                "items": [{"id": email} for email in email_addresses],
             }
 
             logger.info(
@@ -100,16 +97,18 @@ class GoogleCalendarClient:
             response = await asyncio.to_thread(request.execute)
 
             # Parse response
-            calendars = response.get('calendars', {})
+            calendars = response.get("calendars", {})
             busy_times: Dict[str, List[TimeSlot]] = {}
 
             for email, calendar_data in calendars.items():
-                busy_periods = calendar_data.get('busy', [])
+                busy_periods = calendar_data.get("busy", [])
                 time_slots = []
 
                 for period in busy_periods:
-                    start = datetime.fromisoformat(period['start'].replace('Z', '+00:00'))
-                    end = datetime.fromisoformat(period['end'].replace('Z', '+00:00'))
+                    start = datetime.fromisoformat(
+                        period["start"].replace("Z", "+00:00")
+                    )
+                    end = datetime.fromisoformat(period["end"].replace("Z", "+00:00"))
                     time_slots.append(TimeSlot(start=start, end=end))
 
                 busy_times[email] = time_slots
@@ -124,7 +123,7 @@ class GoogleCalendarClient:
         end_time: datetime,
         attendee_emails: List[str],
         description: str = "",
-        timezone: str = "UTC"
+        timezone: str = "UTC",
     ) -> Dict:
         """Create a calendar event with Google Meet link.
 
@@ -147,35 +146,31 @@ class GoogleCalendarClient:
 
             # Prepare event body
             event = {
-                'summary': summary,
-                'description': description,
-                'start': {
-                    'dateTime': start_time.isoformat(),
-                    'timeZone': timezone,
+                "summary": summary,
+                "description": description,
+                "start": {
+                    "dateTime": start_time.isoformat(),
+                    "timeZone": timezone,
                 },
-                'end': {
-                    'dateTime': end_time.isoformat(),
-                    'timeZone': timezone,
+                "end": {
+                    "dateTime": end_time.isoformat(),
+                    "timeZone": timezone,
                 },
-                'attendees': [{'email': email} for email in attendee_emails],
-                'conferenceData': {
-                    'createRequest': {
-                        'requestId': str(uuid.uuid4()),
-                        'conferenceSolutionKey': {
-                            'type': 'hangoutsMeet'
-                        }
+                "attendees": [{"email": email} for email in attendee_emails],
+                "conferenceData": {
+                    "createRequest": {
+                        "requestId": str(uuid.uuid4()),
+                        "conferenceSolutionKey": {"type": "hangoutsMeet"},
                     }
                 },
-                'reminders': {
-                    'useDefault': True
-                },
+                "reminders": {"useDefault": True},
                 # Send invitations to attendees
-                'guestsCanSeeOtherGuests': True,
-                'guestsCanInviteOthers': False,
+                "guestsCanSeeOtherGuests": True,
+                "guestsCanInviteOthers": False,
                 # Make event visible to the entire organization
                 # This allows org-wide access to recordings when they're stored in Google Drive
-                'visibility': 'default',
-                'guestsCanModify': False,
+                "visibility": "default",
+                "guestsCanModify": False,
             }
 
             logger.info(
@@ -185,21 +180,20 @@ class GoogleCalendarClient:
 
             # Create the event with conferenceDataVersion=1 to create Meet link
             request = service.events().insert(
-                calendarId='primary',
+                calendarId="primary",
                 body=event,
                 conferenceDataVersion=1,
-                sendUpdates='all'  # Send email invitations to all attendees
+                sendUpdates="all",  # Send email invitations to all attendees
             )
             # Run in thread pool to avoid blocking event loop
             created_event = await asyncio.to_thread(request.execute)
 
             # Extract useful information
-            event_link = created_event.get('htmlLink')
+            event_link = created_event.get("htmlLink")
             meet_link = self.get_meet_link(created_event)
 
             logger.info(
-                f"Event created successfully: {event_link}\n"
-                f"Meet link: {meet_link}"
+                f"Event created successfully: {event_link}\nMeet link: {meet_link}"
             )
 
             return created_event
@@ -214,16 +208,16 @@ class GoogleCalendarClient:
             Google Meet link or None if not found
         """
         # Try hangoutLink first (deprecated but still works)
-        meet_link = event.get('hangoutLink')
+        meet_link = event.get("hangoutLink")
         if meet_link:
             return meet_link
 
         # Try conferenceData
-        conference_data = event.get('conferenceData', {})
-        entry_points = conference_data.get('entryPoints', [])
+        conference_data = event.get("conferenceData", {})
+        entry_points = conference_data.get("entryPoints", [])
         for entry_point in entry_points:
-            if entry_point.get('entryPointType') == 'video':
-                return entry_point.get('uri')
+            if entry_point.get("entryPointType") == "video":
+                return entry_point.get("uri")
 
         logger.warning("No Meet link found in event")
         return None
@@ -237,4 +231,4 @@ class GoogleCalendarClient:
         Returns:
             Calendar event link or None if not found
         """
-        return event.get('htmlLink')
+        return event.get("htmlLink")

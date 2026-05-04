@@ -11,7 +11,7 @@ from slack_bolt.app.async_app import AsyncApp
 from ..config import get_config
 from ..google.auth import GoogleAuth
 from ..google.calendar_client import GoogleCalendarClient
-from ..models import MeetingRequest, SchedulingMode, TimeSlot
+from ..models import MeetingRequest, SchedulingMode
 from ..scheduling.engine import SchedulingEngine
 from ..scheduling.parser import DateTimeParser
 from ..scheduling.timezone_handler import TimezoneHandler
@@ -38,11 +38,7 @@ class MeetingCoordinator:
         logger.info("Meeting coordinator initialized")
 
     async def handle_meeting_request(
-        self,
-        params: CommandParameters,
-        channel_id: str,
-        user_id: str,
-        app: AsyncApp
+        self, params: CommandParameters, channel_id: str, user_id: str, app: AsyncApp
     ):
         """Handle a meeting scheduling request.
 
@@ -64,16 +60,17 @@ class MeetingCoordinator:
             scope.set_tag("scheduling_mode", str(params.scheduling_mode))
             scope.set_tag("channel_id", channel_id)
             scope.set_user({"id": user_id})
-            scope.set_context("meeting_request", {
-                "duration_minutes": params.duration_minutes,
-                "min_reactions": params.min_reactions,
-                "reaction_duration_seconds": params.reaction_duration_seconds,
-            })
+            scope.set_context(
+                "meeting_request",
+                {
+                    "duration_minutes": params.duration_minutes,
+                    "min_reactions": params.min_reactions,
+                    "reaction_duration_seconds": params.reaction_duration_seconds,
+                },
+            )
 
             # Post initial message
-            message = await self._post_initial_message(
-                app, channel_id, params, user_id
-            )
+            message = await self._post_initial_message(app, channel_id, params, user_id)
             message_ts = message["ts"]
 
             # Create meeting request object
@@ -88,22 +85,20 @@ class MeetingCoordinator:
                 min_reactions=params.min_reactions,
                 created_at=datetime.now(timezone.utc),
                 specific_datetime=None,
-                participants=[]
+                participants=[],
             )
 
             # Start reaction tracking (async callback)
             await self._reaction_tracker.start_tracking(
                 request=request,
                 app=app,
-                callback=lambda req, parts: self._handle_reactions_complete(req, parts, app, params)
+                callback=lambda req, parts: self._handle_reactions_complete(
+                    req, parts, app, params
+                ),
             )
 
     async def _post_initial_message(
-        self,
-        app: AsyncApp,
-        channel_id: str,
-        params: CommandParameters,
-        user_id: str
+        self, app: AsyncApp, channel_id: str, params: CommandParameters, user_id: str
     ) -> Dict:
         """Post initial message asking for reactions.
 
@@ -132,12 +127,11 @@ class MeetingCoordinator:
         )
 
         if params.min_reactions > 1:
-            message += f":busts_in_silhouette: Minimum {params.min_reactions} people needed.\n"
+            message += (
+                f":busts_in_silhouette: Minimum {params.min_reactions} people needed.\n"
+            )
 
-        result = await app.client.chat_postMessage(
-            channel=channel_id,
-            text=message
-        )
+        result = await app.client.chat_postMessage(channel=channel_id, text=message)
 
         logger.info(f"Posted initial message: {result['ts']}")
         return result
@@ -147,7 +141,7 @@ class MeetingCoordinator:
         request: MeetingRequest,
         participants: List[str],
         app: AsyncApp,
-        params: CommandParameters
+        params: CommandParameters,
     ):
         """Handle completion of reaction collection period.
 
@@ -168,17 +162,23 @@ class MeetingCoordinator:
             scope.set_tag("channel_id", request.channel_id)
             scope.set_tag("request_id", request.request_id)
             scope.set_user({"id": request.initiator_user_id})
-            scope.set_context("meeting_request", {
-                "duration_minutes": request.duration_minutes,
-                "min_reactions": request.min_reactions,
-                "participant_count": len(participants),
-            })
+            scope.set_context(
+                "meeting_request",
+                {
+                    "duration_minutes": request.duration_minutes,
+                    "min_reactions": request.min_reactions,
+                    "participant_count": len(participants),
+                },
+            )
 
             # Check minimum reactions
             if len(participants) < request.min_reactions:
                 await self._post_insufficient_reactions(
-                    app, request.channel_id, request.message_ts,
-                    len(participants), request.min_reactions
+                    app,
+                    request.channel_id,
+                    request.message_ts,
+                    len(participants),
+                    request.min_reactions,
                 )
                 return
 
@@ -194,13 +194,19 @@ class MeetingCoordinator:
 
             # Ensure initiator's timezone is available (even if they didn't react)
             if request.initiator_user_id not in user_timezones:
-                initiator_tz = await slack_utils.get_user_timezone(app, request.initiator_user_id)
-                user_timezones[request.initiator_user_id] = initiator_tz if initiator_tz else "UTC"
+                initiator_tz = await slack_utils.get_user_timezone(
+                    app, request.initiator_user_id
+                )
+                user_timezones[request.initiator_user_id] = (
+                    initiator_tz if initiator_tz else "UTC"
+                )
 
             if not user_emails:
                 await self._post_error(
-                    app, request.channel_id, request.message_ts,
-                    "Could not retrieve email addresses for participants."
+                    app,
+                    request.channel_id,
+                    request.message_ts,
+                    "Could not retrieve email addresses for participants.",
                 )
                 return
 
@@ -208,21 +214,21 @@ class MeetingCoordinator:
                 # Branch based on scheduling mode
                 if request.scheduling_mode == SchedulingMode.SPECIFIC_TIME:
                     await self._schedule_specific_time(
-                        app, request, params, participants,
-                        user_emails, user_timezones
+                        app, request, params, participants, user_emails, user_timezones
                     )
                 else:
                     # Check if find-time feature is enabled
                     if not self._config.enable_find_time:
                         await self._post_error(
-                            app, request.channel_id, request.message_ts,
-                            "Automatic time finding is currently disabled."
+                            app,
+                            request.channel_id,
+                            request.message_ts,
+                            "Automatic time finding is currently disabled.",
                         )
                         return
 
                     await self._schedule_find_availability(
-                        app, request, participants,
-                        user_emails, user_timezones
+                        app, request, participants, user_emails, user_timezones
                     )
 
             except Exception as e:
@@ -230,8 +236,10 @@ class MeetingCoordinator:
                 # Capture exception in Sentry with context
                 sentry_sdk.capture_exception(e)
                 await self._post_error(
-                    app, request.channel_id, request.message_ts,
-                    f"Failed to schedule meeting: {str(e)}"
+                    app,
+                    request.channel_id,
+                    request.message_ts,
+                    f"Failed to schedule meeting: {str(e)}",
                 )
 
     async def _schedule_specific_time(
@@ -241,7 +249,7 @@ class MeetingCoordinator:
         params: CommandParameters,
         participants: List[str],
         user_emails: Dict[str, str],
-        user_timezones: Dict[str, str]
+        user_timezones: Dict[str, str],
     ):
         """Schedule meeting at a specific time.
 
@@ -258,22 +266,25 @@ class MeetingCoordinator:
         # Parse the datetime using initiator's timezone
         initiator_tz = user_timezones.get(request.initiator_user_id, "UTC")
         parsed_dt = DateTimeParser.parse_with_fallback(
-            params.specific_datetime_text,
-            timezone=initiator_tz
+            params.specific_datetime_text, timezone=initiator_tz
         )
 
         if not parsed_dt:
             await self._post_error(
-                app, request.channel_id, request.message_ts,
-                f"Could not parse date/time: {params.specific_datetime_text}"
+                app,
+                request.channel_id,
+                request.message_ts,
+                f"Could not parse date/time: {params.specific_datetime_text}",
             )
             return
 
         # Validate it's in the future
         if not DateTimeParser.validate_future_datetime(parsed_dt, min_minutes_ahead=1):
             await self._post_error(
-                app, request.channel_id, request.message_ts,
-                "The specified time is in the past. Please provide a future date/time."
+                app,
+                request.channel_id,
+                request.message_ts,
+                "The specified time is in the past. Please provide a future date/time.",
             )
             return
 
@@ -283,7 +294,7 @@ class MeetingCoordinator:
 
         # Create calendar event
         event = await self._calendar_client.create_event(
-            summary=f"Meeting (via Slack)",
+            summary="Meeting (via Slack)",
             start_time=start_time,
             end_time=end_time,
             attendee_emails=list(user_emails.values()),
@@ -291,7 +302,7 @@ class MeetingCoordinator:
                 f"Meeting scheduled via Slack by <@{request.initiator_user_id}>\n\n"
                 "This meeting will be recorded automatically if configured in Google Workspace admin settings. "
                 "Recordings are available to all organization members."
-            )
+            ),
         )
 
         # Extract links
@@ -300,10 +311,15 @@ class MeetingCoordinator:
 
         # Post success message
         await self._post_success_message(
-            app, request.channel_id, request.message_ts,
-            start_time, request.duration_minutes,
-            participants, meet_link, event_link,
-            user_timezones
+            app,
+            request.channel_id,
+            request.message_ts,
+            start_time,
+            request.duration_minutes,
+            participants,
+            meet_link,
+            event_link,
+            user_timezones,
         )
 
     async def _schedule_find_availability(
@@ -312,7 +328,7 @@ class MeetingCoordinator:
         request: MeetingRequest,
         participants: List[str],
         user_emails: Dict[str, str],
-        user_timezones: Dict[str, str]
+        user_timezones: Dict[str, str],
     ):
         """Schedule meeting by finding optimal availability.
 
@@ -332,12 +348,13 @@ class MeetingCoordinator:
         freebusy_data = await self._calendar_client.get_freebusy(
             email_addresses=list(user_emails.values()),
             time_min=search_start,
-            time_max=search_end
+            time_max=search_end,
         )
 
         # Create timezone mapping for emails (needed by scheduling engine)
-        email_timezones = {email: user_timezones[user_id]
-                          for user_id, email in user_emails.items()}
+        email_timezones = {
+            email: user_timezones[user_id] for user_id, email in user_emails.items()
+        }
 
         # Find optimal time (use initiator's timezone as reference for business hours)
         initiator_tz = user_timezones.get(request.initiator_user_id, "UTC")
@@ -352,13 +369,16 @@ class MeetingCoordinator:
             freebusy_data=freebusy_data,
             user_timezones=email_timezones,
             min_attendees=request.min_reactions,
-            reference_timezone=initiator_tz
+            reference_timezone=initiator_tz,
         )
 
         if not result:
             await self._post_no_availability(
-                app, request.channel_id, request.message_ts,
-                request.min_reactions, self._config.max_days_ahead
+                app,
+                request.channel_id,
+                request.message_ts,
+                request.min_reactions,
+                self._config.max_days_ahead,
             )
             return
 
@@ -369,7 +389,7 @@ class MeetingCoordinator:
         end_time = start_time + timedelta(minutes=request.duration_minutes)
 
         event = await self._calendar_client.create_event(
-            summary=f"Meeting (via Slack)",
+            summary="Meeting (via Slack)",
             start_time=start_time,
             end_time=end_time,
             attendee_emails=list(user_emails.values()),
@@ -377,7 +397,7 @@ class MeetingCoordinator:
                 f"Meeting scheduled via Slack by <@{request.initiator_user_id}>\n\n"
                 "This meeting will be recorded automatically if configured in Google Workspace admin settings. "
                 "Recordings are available to all organization members."
-            )
+            ),
         )
 
         # Extract links
@@ -386,10 +406,15 @@ class MeetingCoordinator:
 
         # Post success message
         await self._post_success_message(
-            app, request.channel_id, request.message_ts,
-            start_time, request.duration_minutes,
-            participants, meet_link, event_link,
-            user_timezones
+            app,
+            request.channel_id,
+            request.message_ts,
+            start_time,
+            request.duration_minutes,
+            participants,
+            meet_link,
+            event_link,
+            user_timezones,
         )
 
     async def _post_success_message(
@@ -402,7 +427,7 @@ class MeetingCoordinator:
         participants: List[str],
         meet_link: str,
         event_link: str,
-        user_timezones: Dict[str, str]
+        user_timezones: Dict[str, str],
     ):
         """Post success message with meeting details.
 
@@ -438,20 +463,13 @@ class MeetingCoordinator:
         message += "\nCalendar invitations have been sent to all attendees!"
 
         await app.client.chat_postMessage(
-            channel=channel_id,
-            thread_ts=thread_ts,
-            text=message
+            channel=channel_id, thread_ts=thread_ts, text=message
         )
 
         logger.info(f"Posted success message for meeting at {start_time}")
 
     async def _post_insufficient_reactions(
-        self,
-        app: AsyncApp,
-        channel_id: str,
-        thread_ts: str,
-        actual: int,
-        required: int
+        self, app: AsyncApp, channel_id: str, thread_ts: str, actual: int, required: int
     ):
         """Post message about insufficient reactions."""
         message = (
@@ -460,9 +478,7 @@ class MeetingCoordinator:
         )
 
         await app.client.chat_postMessage(
-            channel=channel_id,
-            thread_ts=thread_ts,
-            text=message
+            channel=channel_id, thread_ts=thread_ts, text=message
         )
 
         logger.info(f"Posted insufficient reactions message ({actual}/{required})")
@@ -473,7 +489,7 @@ class MeetingCoordinator:
         channel_id: str,
         thread_ts: str,
         min_attendees: int,
-        days_searched: int
+        days_searched: int,
     ):
         """Post message about no availability found."""
         message = (
@@ -486,27 +502,19 @@ class MeetingCoordinator:
         )
 
         await app.client.chat_postMessage(
-            channel=channel_id,
-            thread_ts=thread_ts,
-            text=message
+            channel=channel_id, thread_ts=thread_ts, text=message
         )
 
-        logger.info(f"Posted no availability message")
+        logger.info("Posted no availability message")
 
     async def _post_error(
-        self,
-        app: AsyncApp,
-        channel_id: str,
-        thread_ts: str,
-        error_message: str
+        self, app: AsyncApp, channel_id: str, thread_ts: str, error_message: str
     ):
         """Post error message."""
         message = f":x: *Error:* {error_message}"
 
         await app.client.chat_postMessage(
-            channel=channel_id,
-            thread_ts=thread_ts,
-            text=message
+            channel=channel_id, thread_ts=thread_ts, text=message
         )
 
         logger.error(f"Posted error message: {error_message}")

@@ -20,8 +20,8 @@ async def _process_schedule_request(
     user_id: str,
     channel_id: str,
     respond_func,
-    coordinator: 'MeetingCoordinator',
-    app: AsyncApp
+    coordinator: "MeetingCoordinator",
+    app: AsyncApp,
 ):
     """Common logic for processing schedule requests.
 
@@ -36,7 +36,7 @@ async def _process_schedule_request(
     config = get_config()
 
     # Handle help request
-    if not text or text.lower() in ['help', '?']:
+    if not text or text.lower() in ["help", "?"]:
         await respond_func(CommandParser.get_help_message())
         return
 
@@ -45,21 +45,20 @@ async def _process_schedule_request(
         params = CommandParser.parse(
             text,
             default_duration=config.default_meeting_duration,
-            default_min=config.min_reactions
+            default_min=config.min_reactions,
         )
 
         # Delegate to coordinator
         await coordinator.handle_meeting_request(
-            params=params,
-            channel_id=channel_id,
-            user_id=user_id,
-            app=app
+            params=params, channel_id=channel_id, user_id=user_id, app=app
         )
 
     except ValueError as e:
         # Invalid command format
         logger.warning(f"Invalid command format: {e}")
-        await respond_func(f":warning: *Invalid command:* {str(e)}\n\n{CommandParser.get_help_message()}")
+        await respond_func(
+            f":warning: *Invalid command:* {str(e)}\n\n{CommandParser.get_help_message()}"
+        )
     except Exception as e:
         logger.error(f"Error handling schedule request: {e}", exc_info=True)
         await respond_func(
@@ -68,13 +67,14 @@ async def _process_schedule_request(
         )
 
 
-def register_handlers(app: AsyncApp, coordinator: 'MeetingCoordinator'):
+def register_handlers(app: AsyncApp, coordinator: "MeetingCoordinator"):
     """Register all Slack command and event handlers.
 
     Args:
         app: Slack AsyncApp instance
         coordinator: MeetingCoordinator instance
     """
+
     @app.command("/schedule-meet")
     async def handle_schedule_command(ack, command, respond, context: AsyncBoltContext):
         """Handle /schedule-meet slash command.
@@ -91,7 +91,9 @@ def register_handlers(app: AsyncApp, coordinator: 'MeetingCoordinator'):
         channel_id = command["channel_id"]
         command_text = command.get("text", "").strip()
 
-        logger.info(f"Received /schedule-meet command from user {user_id} in channel {channel_id}")
+        logger.info(
+            f"Received /schedule-meet command from user {user_id} in channel {channel_id}"
+        )
 
         await _process_schedule_request(
             text=command_text,
@@ -99,7 +101,7 @@ def register_handlers(app: AsyncApp, coordinator: 'MeetingCoordinator'):
             channel_id=channel_id,
             respond_func=respond,
             coordinator=coordinator,
-            app=app
+            app=app,
         )
 
     @app.event("app_mention")
@@ -129,7 +131,7 @@ def register_handlers(app: AsyncApp, coordinator: 'MeetingCoordinator'):
             channel_id=channel_id,
             respond_func=say,
             coordinator=coordinator,
-            app=app
+            app=app,
         )
 
     logger.info("Slack handlers registered successfully")

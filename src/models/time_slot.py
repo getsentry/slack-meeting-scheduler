@@ -11,7 +11,7 @@ class TimeSlot:
     start: datetime
     end: datetime
 
-    def overlaps(self, other: 'TimeSlot') -> bool:
+    def overlaps(self, other: "TimeSlot") -> bool:
         """Check if this time slot overlaps with another.
 
         Args:

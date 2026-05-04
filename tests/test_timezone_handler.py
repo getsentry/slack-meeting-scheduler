@@ -1,7 +1,7 @@
 """Tests for TimezoneHandler."""
 
 import pytest
-from datetime import datetime, time
+from datetime import datetime
 import pytz
 
 from src.scheduling.timezone_handler import TimezoneHandler
@@ -41,10 +41,7 @@ class TestTimezoneHandler:
         # Use a fixed date in PST season (January)
         utc_dt = datetime(2026, 1, 15, 10, 0, 0, tzinfo=pytz.UTC)
 
-        pacific_dt = TimezoneHandler.convert_to_timezone(
-            utc_dt,
-            "America/Los_Angeles"
-        )
+        pacific_dt = TimezoneHandler.convert_to_timezone(utc_dt, "America/Los_Angeles")
 
         assert pacific_dt.tzinfo.zone == "America/Los_Angeles"
         # 10:00 UTC = 02:00 PST (UTC-8)
@@ -69,9 +66,7 @@ class TestTimezoneHandler:
         dt = pacific_tz.localize(datetime(2026, 1, 15, 10, 0, 0))  # Wednesday
 
         result = TimezoneHandler.is_within_business_hours(
-            dt,
-            business_hours["start"],
-            business_hours["end"]
+            dt, business_hours["start"], business_hours["end"]
         )
 
         assert result is True
@@ -83,9 +78,7 @@ class TestTimezoneHandler:
         dt = pacific_tz.localize(datetime(2026, 1, 15, 8, 0, 0))
 
         result = TimezoneHandler.is_within_business_hours(
-            dt,
-            business_hours["start"],
-            business_hours["end"]
+            dt, business_hours["start"], business_hours["end"]
         )
 
         assert result is False
@@ -97,9 +90,7 @@ class TestTimezoneHandler:
         dt = pacific_tz.localize(datetime(2026, 1, 15, 18, 0, 0))
 
         result = TimezoneHandler.is_within_business_hours(
-            dt,
-            business_hours["start"],
-            business_hours["end"]
+            dt, business_hours["start"], business_hours["end"]
         )
 
         assert result is False
@@ -110,24 +101,32 @@ class TestTimezoneHandler:
 
         # Exactly 9 AM (start)
         dt_start = pacific_tz.localize(datetime(2026, 1, 15, 9, 0, 0))
-        assert TimezoneHandler.is_within_business_hours(
-            dt_start, business_hours["start"], business_hours["end"]
-        ) is True
+        assert (
+            TimezoneHandler.is_within_business_hours(
+                dt_start, business_hours["start"], business_hours["end"]
+            )
+            is True
+        )
 
         # Exactly 5 PM (end)
         dt_end = pacific_tz.localize(datetime(2026, 1, 15, 17, 0, 0))
-        assert TimezoneHandler.is_within_business_hours(
-            dt_end, business_hours["start"], business_hours["end"]
-        ) is True
+        assert (
+            TimezoneHandler.is_within_business_hours(
+                dt_end, business_hours["start"], business_hours["end"]
+            )
+            is True
+        )
 
-    def test_is_within_business_hours_with_timezone_conversion(self, sample_datetime_utc, business_hours):
+    def test_is_within_business_hours_with_timezone_conversion(
+        self, sample_datetime_utc, business_hours
+    ):
         """Test business hours check with timezone conversion."""
         # 10:00 UTC = 02:00 PST (outside business hours)
         result = TimezoneHandler.is_within_business_hours(
             sample_datetime_utc,
             business_hours["start"],
             business_hours["end"],
-            timezone="America/Los_Angeles"
+            timezone="America/Los_Angeles",
         )
 
         assert result is False
@@ -157,9 +156,7 @@ class TestTimezoneHandler:
         dt = pacific_tz.localize(datetime(2026, 1, 15, 10, 0, 0))
 
         result = TimezoneHandler.is_business_day(
-            dt,
-            business_hours["start"],
-            business_hours["end"]
+            dt, business_hours["start"], business_hours["end"]
         )
 
         assert result is True
@@ -171,9 +168,7 @@ class TestTimezoneHandler:
         dt = pacific_tz.localize(datetime(2026, 1, 17, 10, 0, 0))
 
         result = TimezoneHandler.is_business_day(
-            dt,
-            business_hours["start"],
-            business_hours["end"]
+            dt, business_hours["start"], business_hours["end"]
         )
 
         assert result is False
@@ -185,9 +180,7 @@ class TestTimezoneHandler:
         dt = pacific_tz.localize(datetime(2026, 1, 15, 8, 0, 0))
 
         result = TimezoneHandler.is_business_day(
-            dt,
-            business_hours["start"],
-            business_hours["end"]
+            dt, business_hours["start"], business_hours["end"]
         )
 
         assert result is False
@@ -195,8 +188,7 @@ class TestTimezoneHandler:
     def test_format_for_user(self, sample_datetime_utc):
         """Test formatting datetime for user."""
         formatted = TimezoneHandler.format_for_user(
-            sample_datetime_utc,
-            "America/Los_Angeles"
+            sample_datetime_utc, "America/Los_Angeles"
         )
 
         # Check that it contains a date (don't hardcode the specific date)
@@ -207,12 +199,10 @@ class TestTimezoneHandler:
     def test_format_for_user_different_timezone(self, sample_datetime_utc):
         """Test formatting for different timezones."""
         pacific_formatted = TimezoneHandler.format_for_user(
-            sample_datetime_utc,
-            "America/Los_Angeles"
+            sample_datetime_utc, "America/Los_Angeles"
         )
         eastern_formatted = TimezoneHandler.format_for_user(
-            sample_datetime_utc,
-            "America/New_York"
+            sample_datetime_utc, "America/New_York"
         )
 
         # Different times for different timezones

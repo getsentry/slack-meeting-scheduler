@@ -25,7 +25,11 @@ class MeetingRequest:
 
     def __str__(self) -> str:
         """String representation of the meeting request."""
-        mode = "specific time" if self.scheduling_mode == SchedulingMode.SPECIFIC_TIME else "find availability"
+        mode = (
+            "specific time"
+            if self.scheduling_mode == SchedulingMode.SPECIFIC_TIME
+            else "find availability"
+        )
         return (
             f"MeetingRequest(id={self.request_id}, mode={mode}, "
             f"participants={len(self.participants)}, duration={self.duration_minutes}m)"

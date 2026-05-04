@@ -2,7 +2,7 @@
 
 import json
 import logging
-from typing import List, Optional
+from typing import Optional
 
 import google.auth
 from google.oauth2 import service_account
@@ -16,8 +16,8 @@ class GoogleAuth:
 
     # Required scopes for Calendar API
     SCOPES = [
-        'https://www.googleapis.com/auth/calendar',
-        'https://www.googleapis.com/auth/calendar.events',
+        "https://www.googleapis.com/auth/calendar",
+        "https://www.googleapis.com/auth/calendar.events",
     ]
 
     def __init__(self, service_account_json: Optional[str] = None):
@@ -28,11 +28,15 @@ class GoogleAuth:
                                  If None, uses Application Default Credentials (Cloud Run).
         """
         self._credentials = None
-        self._service_account_info = json.loads(service_account_json) if service_account_json else None
+        self._service_account_info = (
+            json.loads(service_account_json) if service_account_json else None
+        )
         self._use_adc = service_account_json is None
 
         if self._use_adc:
-            logger.info("Google authentication initialized with Application Default Credentials")
+            logger.info(
+                "Google authentication initialized with Application Default Credentials"
+            )
         else:
             logger.info("Google authentication initialized with service account JSON")
 
@@ -45,16 +49,21 @@ class GoogleAuth:
         if self._credentials is None or not self._credentials.valid:
             if self._use_adc:
                 # Use Application Default Credentials (Cloud Run service account)
-                logger.debug("Creating credentials from Application Default Credentials")
+                logger.debug(
+                    "Creating credentials from Application Default Credentials"
+                )
                 credentials, project = google.auth.default(scopes=self.SCOPES)
                 self._credentials = credentials
-                logger.info(f"Using Application Default Credentials for project: {project}")
+                logger.info(
+                    f"Using Application Default Credentials for project: {project}"
+                )
             else:
                 # Use service account JSON
                 logger.debug("Creating new service account credentials")
-                self._credentials = service_account.Credentials.from_service_account_info(
-                    self._service_account_info,
-                    scopes=self.SCOPES
+                self._credentials = (
+                    service_account.Credentials.from_service_account_info(
+                        self._service_account_info, scopes=self.SCOPES
+                    )
                 )
 
             # Refresh if needed

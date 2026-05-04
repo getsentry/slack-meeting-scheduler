@@ -41,7 +41,9 @@ async def _fetch_user_info(app: AsyncApp, user_id: str) -> Optional[Dict]:
         if result.get("ok"):
             return result.get("user", {})
         else:
-            logger.warning(f"Failed to get user info for {user_id}: {result.get('error')}")
+            logger.warning(
+                f"Failed to get user info for {user_id}: {result.get('error')}"
+            )
     except Exception as e:
         logger.error(f"Error fetching user info for {user_id}: {e}")
 
@@ -133,7 +135,9 @@ async def get_user_name(app: AsyncApp, user_id: str) -> str:
     if user:
         profile = user.get("profile", {})
         # Try display_name first, fall back to real_name
-        name = profile.get("display_name") or profile.get("real_name") or user.get("name")
+        name = (
+            profile.get("display_name") or profile.get("real_name") or user.get("name")
+        )
         if name:
             return name
 

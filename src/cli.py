@@ -2,11 +2,10 @@
 
 import argparse
 import asyncio
-import json
 import logging
 import sys
 from datetime import datetime, timedelta, timezone
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 from .config import get_config
 from .google.auth import GoogleAuth
@@ -21,14 +20,14 @@ def setup_logging(verbose: bool = False):
     level = logging.DEBUG if verbose else logging.INFO
     logging.basicConfig(
         level=level,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        handlers=[logging.StreamHandler(sys.stdout)]
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        handlers=[logging.StreamHandler(sys.stdout)],
     )
 
     # Reduce noise from external libraries
     if not verbose:
-        logging.getLogger('googleapiclient').setLevel(logging.WARNING)
-        logging.getLogger('google.auth').setLevel(logging.WARNING)
+        logging.getLogger("googleapiclient").setLevel(logging.WARNING)
+        logging.getLogger("google.auth").setLevel(logging.WARNING)
 
 
 def parse_attendees(attendees_arg: str) -> List[Dict[str, str]]:
@@ -44,13 +43,13 @@ def parse_attendees(attendees_arg: str) -> List[Dict[str, str]]:
         List of dicts with 'email' and 'timezone' keys
     """
     attendees = []
-    for part in attendees_arg.split(','):
-        if ':' in part:
-            email, tz = part.split(':', 1)
-            attendees.append({'email': email.strip(), 'timezone': tz.strip()})
+    for part in attendees_arg.split(","):
+        if ":" in part:
+            email, tz = part.split(":", 1)
+            attendees.append({"email": email.strip(), "timezone": tz.strip()})
         else:
             # Default to UTC if no timezone specified
-            attendees.append({'email': part.strip(), 'timezone': 'UTC'})
+            attendees.append({"email": part.strip(), "timezone": "UTC"})
     return attendees
 
 
@@ -60,7 +59,7 @@ async def schedule_specific_time(
     specific_time: str,
     duration: int,
     reference_timezone: str,
-    dry_run: bool = False
+    dry_run: bool = False,
 ) -> None:
     """Schedule a meeting at a specific time.
 
@@ -80,7 +79,9 @@ async def schedule_specific_time(
     logger.info(f"Attendees: {[a['email'] for a in attendees]}")
 
     # Parse the datetime
-    parsed_dt = DateTimeParser.parse_with_fallback(specific_time, timezone=reference_timezone)
+    parsed_dt = DateTimeParser.parse_with_fallback(
+        specific_time, timezone=reference_timezone
+    )
     if not parsed_dt:
         logger.error(f"Could not parse date/time: {specific_time}")
         sys.exit(1)
@@ -94,17 +95,23 @@ async def schedule_specific_time(
     start_time = TimezoneHandler.convert_to_utc(parsed_dt)
     end_time = start_time + timedelta(minutes=duration)
 
-    logger.info(f"Meeting time (UTC): {start_time.isoformat()} - {end_time.isoformat()}")
+    logger.info(
+        f"Meeting time (UTC): {start_time.isoformat()} - {end_time.isoformat()}"
+    )
 
     # Show time in each attendee's timezone
     print("\nMeeting time for each attendee:")
     for attendee in attendees:
-        local_time = TimezoneHandler.convert_to_timezone(start_time, attendee['timezone'])
-        formatted = TimezoneHandler.format_for_user(start_time, attendee['timezone'])
+        local_time = TimezoneHandler.convert_to_timezone(
+            start_time, attendee["timezone"]
+        )
+        formatted = TimezoneHandler.format_for_user(start_time, attendee["timezone"])
         print(f"  {attendee['email']: <30} {formatted}")
 
     if dry_run:
-        print("\n[DRY RUN] Would create calendar event (use --execute to actually create)")
+        print(
+            "\n[DRY RUN] Would create calendar event (use --execute to actually create)"
+        )
         return
 
     # Create calendar event
@@ -113,8 +120,8 @@ async def schedule_specific_time(
         summary="Test Meeting (CLI)",
         start_time=start_time,
         end_time=end_time,
-        attendee_emails=[a['email'] for a in attendees],
-        description="Meeting scheduled via CLI test tool"
+        attendee_emails=[a["email"] for a in attendees],
+        description="Meeting scheduled via CLI test tool",
     )
 
     # Extract links
@@ -136,7 +143,7 @@ async def find_optimal_time(
     search_days: int,
     min_attendees: int,
     reference_timezone: str,
-    dry_run: bool = False
+    dry_run: bool = False,
 ) -> None:
     """Find optimal meeting time based on availability.
 
@@ -164,18 +171,18 @@ async def find_optimal_time(
 
     print(f"\nQuerying calendar availability for {len(attendees)} attendees...")
     freebusy_data = await calendar_client.get_freebusy(
-        email_addresses=[a['email'] for a in attendees],
+        email_addresses=[a["email"] for a in attendees],
         time_min=search_start,
-        time_max=search_end
+        time_max=search_end,
     )
 
     # Build timezone mapping
-    user_timezones = {a['email']: a['timezone'] for a in attendees}
+    user_timezones = {a["email"]: a["timezone"] for a in attendees}
 
     # Find optimal time
     print("Finding optimal time slot...")
     result = SchedulingEngine.find_optimal_time(
-        attendee_emails=[a['email'] for a in attendees],
+        attendee_emails=[a["email"] for a in attendees],
         duration_minutes=duration,
         search_start=search_start,
         search_days=search_days,
@@ -184,7 +191,7 @@ async def find_optimal_time(
         freebusy_data=freebusy_data,
         user_timezones=user_timezones,
         min_attendees=min_attendees,
-        reference_timezone=reference_timezone
+        reference_timezone=reference_timezone,
     )
 
     if not result:
@@ -201,21 +208,25 @@ async def find_optimal_time(
     optimal_slot, availability, score = result
     num_available = sum(1 for avail in availability.values() if avail)
 
-    print(f"\n✓ Found optimal time slot!")
+    print("\n✓ Found optimal time slot!")
     print(f"  Score: {score}")
     print(f"  Available: {num_available}/{len(attendees)} attendees")
 
     # Show time in each attendee's timezone
     print("\nMeeting time for each attendee:")
     for attendee in attendees:
-        local_time = TimezoneHandler.convert_to_timezone(optimal_slot, attendee['timezone'])
-        formatted = TimezoneHandler.format_for_user(optimal_slot, attendee['timezone'])
-        is_available = availability.get(attendee['email'], False)
+        local_time = TimezoneHandler.convert_to_timezone(
+            optimal_slot, attendee["timezone"]
+        )
+        formatted = TimezoneHandler.format_for_user(optimal_slot, attendee["timezone"])
+        is_available = availability.get(attendee["email"], False)
         status = "✓" if is_available else "✗"
         print(f"  {status} {attendee['email']: <30} {formatted}")
 
     if dry_run:
-        print("\n[DRY RUN] Would create calendar event (use --execute to actually create)")
+        print(
+            "\n[DRY RUN] Would create calendar event (use --execute to actually create)"
+        )
         return
 
     # Create calendar event
@@ -227,8 +238,8 @@ async def find_optimal_time(
         summary="Test Meeting (CLI)",
         start_time=start_time,
         end_time=end_time,
-        attendee_emails=[a['email'] for a in attendees],
-        description="Meeting scheduled via CLI test tool"
+        attendee_emails=[a["email"] for a in attendees],
+        description="Meeting scheduled via CLI test tool",
     )
 
     # Extract links
@@ -271,61 +282,86 @@ Examples:
     --time "tomorrow 3pm" \\
     --timezone "America/New_York" \\
     --execute
-        """
+        """,
     )
 
-    parser.add_argument('-v', '--verbose', action='store_true', help='Enable verbose logging')
+    parser.add_argument(
+        "-v", "--verbose", action="store_true", help="Enable verbose logging"
+    )
 
-    subparsers = parser.add_subparsers(dest='command', help='Command to run', required=True)
+    subparsers = parser.add_subparsers(
+        dest="command", help="Command to run", required=True
+    )
 
     # Schedule command (specific time)
-    schedule_parser = subparsers.add_parser('schedule', help='Schedule at specific time')
-    schedule_parser.add_argument(
-        '--attendees', required=True,
-        help='Comma-separated list of email:timezone pairs (e.g., alice@example.com:America/New_York,bob@example.com:UTC)'
+    schedule_parser = subparsers.add_parser(
+        "schedule", help="Schedule at specific time"
     )
     schedule_parser.add_argument(
-        '--time', required=True,
-        help='Meeting time in natural language (e.g., "tomorrow 2pm", "Jan 20 at 3:30pm")'
+        "--attendees",
+        required=True,
+        help="Comma-separated list of email:timezone pairs (e.g., alice@example.com:America/New_York,bob@example.com:UTC)",
     )
     schedule_parser.add_argument(
-        '--timezone', default='UTC',
-        help='Timezone for interpreting the time (default: UTC)'
+        "--time",
+        required=True,
+        help='Meeting time in natural language (e.g., "tomorrow 2pm", "Jan 20 at 3:30pm")',
     )
     schedule_parser.add_argument(
-        '--duration', type=int, default=30,
-        help='Meeting duration in minutes (default: 30)'
+        "--timezone",
+        default="UTC",
+        help="Timezone for interpreting the time (default: UTC)",
     )
     schedule_parser.add_argument(
-        '--execute', dest='dry_run', action='store_false', default=True,
-        help='Actually create the calendar event (default: dry run)'
+        "--duration",
+        type=int,
+        default=30,
+        help="Meeting duration in minutes (default: 30)",
+    )
+    schedule_parser.add_argument(
+        "--execute",
+        dest="dry_run",
+        action="store_false",
+        default=True,
+        help="Actually create the calendar event (default: dry run)",
     )
 
     # Find command (optimal time)
-    find_parser = subparsers.add_parser('find', help='Find optimal time')
+    find_parser = subparsers.add_parser("find", help="Find optimal time")
     find_parser.add_argument(
-        '--attendees', required=True,
-        help='Comma-separated list of email:timezone pairs (e.g., alice@example.com:America/New_York,bob@example.com:UTC)'
+        "--attendees",
+        required=True,
+        help="Comma-separated list of email:timezone pairs (e.g., alice@example.com:America/New_York,bob@example.com:UTC)",
     )
     find_parser.add_argument(
-        '--duration', type=int, default=30,
-        help='Meeting duration in minutes (default: 30)'
+        "--duration",
+        type=int,
+        default=30,
+        help="Meeting duration in minutes (default: 30)",
     )
     find_parser.add_argument(
-        '--search-days', type=int, default=14,
-        help='Number of days ahead to search (default: 14)'
+        "--search-days",
+        type=int,
+        default=14,
+        help="Number of days ahead to search (default: 14)",
     )
     find_parser.add_argument(
-        '--min-attendees', type=int, default=1,
-        help='Minimum attendees required (default: 1)'
+        "--min-attendees",
+        type=int,
+        default=1,
+        help="Minimum attendees required (default: 1)",
     )
     find_parser.add_argument(
-        '--timezone', default='UTC',
-        help='Reference timezone for business hours (default: UTC)'
+        "--timezone",
+        default="UTC",
+        help="Reference timezone for business hours (default: UTC)",
     )
     find_parser.add_argument(
-        '--execute', dest='dry_run', action='store_false', default=True,
-        help='Actually create the calendar event (default: dry run)'
+        "--execute",
+        dest="dry_run",
+        action="store_false",
+        default=True,
+        help="Actually create the calendar event (default: dry run)",
     )
 
     args = parser.parse_args()
@@ -351,7 +387,7 @@ Examples:
         logger.info("Google Calendar client initialized")
     except Exception as e:
         logger.error(f"Failed to initialize Google Calendar client: {e}", exc_info=True)
-        print(f"\nError: Could not initialize Google Calendar client")
+        print("\nError: Could not initialize Google Calendar client")
         print(f"  {e}")
         print("\nMake sure:")
         print("  - GOOGLE_SERVICE_ACCOUNT_PATH is set in .env")
@@ -365,16 +401,16 @@ Examples:
 
     # Execute command
     try:
-        if args.command == 'schedule':
+        if args.command == "schedule":
             await schedule_specific_time(
                 calendar_client=calendar_client,
                 attendees=attendees,
                 specific_time=args.time,
                 duration=args.duration,
                 reference_timezone=args.timezone,
-                dry_run=args.dry_run
+                dry_run=args.dry_run,
             )
-        elif args.command == 'find':
+        elif args.command == "find":
             await find_optimal_time(
                 calendar_client=calendar_client,
                 attendees=attendees,
@@ -382,7 +418,7 @@ Examples:
                 search_days=args.search_days,
                 min_attendees=args.min_attendees,
                 reference_timezone=args.timezone,
-                dry_run=args.dry_run
+                dry_run=args.dry_run,
             )
     except KeyboardInterrupt:
         print("\n\nInterrupted by user")

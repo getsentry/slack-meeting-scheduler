@@ -2,10 +2,9 @@
 
 import logging
 from datetime import datetime, time
-from typing import Dict, Optional
+from typing import Optional
 
 import pytz
-from dateutil import tz
 
 logger = logging.getLogger(__name__)
 
@@ -59,7 +58,7 @@ class TimezoneHandler:
         dt: datetime,
         business_start: time,
         business_end: time,
-        timezone: Optional[str] = None
+        timezone: Optional[str] = None,
     ) -> bool:
         """Check if datetime falls within business hours.
 
@@ -109,7 +108,7 @@ class TimezoneHandler:
         dt: datetime,
         business_start: time,
         business_end: time,
-        timezone: Optional[str] = None
+        timezone: Optional[str] = None,
     ) -> bool:
         """Check if datetime is on a business day and within business hours.
 
@@ -133,7 +132,10 @@ class TimezoneHandler:
 
         # Check if within business hours
         return TimezoneHandler.is_within_business_hours(
-            check_dt, business_start, business_end, timezone=None  # Already converted
+            check_dt,
+            business_start,
+            business_end,
+            timezone=None,  # Already converted
         )
 
     @staticmethod

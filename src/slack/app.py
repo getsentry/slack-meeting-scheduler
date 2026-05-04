@@ -38,10 +38,7 @@ def create_socket_mode_handler(app: AsyncApp) -> AsyncSocketModeHandler:
     """
     config = get_config()
 
-    handler = AsyncSocketModeHandler(
-        app=app,
-        app_token=config.slack_app_token
-    )
+    handler = AsyncSocketModeHandler(app=app, app_token=config.slack_app_token)
 
     logger.info("Socket Mode handler created successfully")
     return handler

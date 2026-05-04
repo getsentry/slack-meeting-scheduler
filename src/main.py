@@ -37,7 +37,7 @@ def setup_sentry(config):
         profiles_sample_rate=config.sentry_profiles_sample_rate,
         integrations=[sentry_logging],
         # Set release version from package version
-        release=f"slack-meeting-scheduler@0.1.0",
+        release="slack-meeting-scheduler@0.1.0",
         # Attach stack traces to all messages
         attach_stacktrace=True,
         # Send default PII (personally identifiable information)

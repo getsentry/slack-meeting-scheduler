@@ -1,7 +1,7 @@
 """Tests for AvailabilityChecker."""
 
 import pytest
-from datetime import datetime, time, timedelta
+from datetime import datetime, timedelta
 import pytz
 
 from src.scheduling.availability import AvailabilityChecker
@@ -19,7 +19,7 @@ class TestAvailabilityChecker:
             duration_minutes=30,
             business_start=business_hours["start"],
             business_end=business_hours["end"],
-            reference_timezone="America/Los_Angeles"
+            reference_timezone="America/Los_Angeles",
         )
 
         assert len(slots) > 0
@@ -39,7 +39,7 @@ class TestAvailabilityChecker:
             duration_minutes=30,
             business_start=business_hours["start"],
             business_end=business_hours["end"],
-            reference_timezone="America/Los_Angeles"
+            reference_timezone="America/Los_Angeles",
         )
 
         # Convert slots back to check days
@@ -48,7 +48,9 @@ class TestAvailabilityChecker:
             # Should not be Saturday (5) or Sunday (6)
             assert slot_pacific.weekday() not in [5, 6]
 
-    def test_generate_candidate_slots_respects_business_hours(self, sample_datetime_utc, business_hours):
+    def test_generate_candidate_slots_respects_business_hours(
+        self, sample_datetime_utc, business_hours
+    ):
         """Test that slots are within business hours."""
         reference_tz = "America/Los_Angeles"
         slots = AvailabilityChecker.generate_candidate_slots(
@@ -57,7 +59,7 @@ class TestAvailabilityChecker:
             duration_minutes=30,
             business_start=business_hours["start"],
             business_end=business_hours["end"],
-            reference_timezone=reference_tz
+            reference_timezone=reference_tz,
         )
 
         # Convert to reference timezone to check business hours
@@ -74,7 +76,9 @@ class TestAvailabilityChecker:
             slot_end = slot_in_tz + timedelta(minutes=30)
             assert slot_end.time() <= business_hours["end"]
 
-    def test_generate_candidate_slots_custom_increment(self, sample_datetime_utc, business_hours):
+    def test_generate_candidate_slots_custom_increment(
+        self, sample_datetime_utc, business_hours
+    ):
         """Test generating slots with custom increment."""
         slots_30min = AvailabilityChecker.generate_candidate_slots(
             start_date=sample_datetime_utc,
@@ -83,7 +87,7 @@ class TestAvailabilityChecker:
             business_start=business_hours["start"],
             business_end=business_hours["end"],
             slot_increment_minutes=30,
-            reference_timezone="America/Los_Angeles"
+            reference_timezone="America/Los_Angeles",
         )
 
         slots_60min = AvailabilityChecker.generate_candidate_slots(
@@ -93,7 +97,7 @@ class TestAvailabilityChecker:
             business_start=business_hours["start"],
             business_end=business_hours["end"],
             slot_increment_minutes=60,
-            reference_timezone="America/Los_Angeles"
+            reference_timezone="America/Los_Angeles",
         )
 
         # 60-minute increments should produce fewer slots
@@ -109,7 +113,7 @@ class TestAvailabilityChecker:
                 num_days=1,
                 duration_minutes=30,
                 business_start=business_hours["start"],
-                business_end=business_hours["end"]
+                business_end=business_hours["end"],
             )
 
     def test_check_availability_all_available(self, sample_datetime_utc):
@@ -117,13 +121,13 @@ class TestAvailabilityChecker:
         freebusy_data = {
             "user1@example.com": [],
             "user2@example.com": [],
-            "user3@example.com": []
+            "user3@example.com": [],
         }
 
         availability = AvailabilityChecker.check_availability(
             slot_start=sample_datetime_utc,
             duration_minutes=30,
-            freebusy_data=freebusy_data
+            freebusy_data=freebusy_data,
         )
 
         assert len(availability) == 3
@@ -132,20 +136,19 @@ class TestAvailabilityChecker:
     def test_check_availability_one_busy(self, sample_datetime_utc):
         """Test checking availability when one user is busy."""
         busy_slot = TimeSlot(
-            start=sample_datetime_utc,
-            end=sample_datetime_utc + timedelta(hours=1)
+            start=sample_datetime_utc, end=sample_datetime_utc + timedelta(hours=1)
         )
 
         freebusy_data = {
             "user1@example.com": [],
             "user2@example.com": [busy_slot],
-            "user3@example.com": []
+            "user3@example.com": [],
         }
 
         availability = AvailabilityChecker.check_availability(
             slot_start=sample_datetime_utc,
             duration_minutes=30,
-            freebusy_data=freebusy_data
+            freebusy_data=freebusy_data,
         )
 
         assert availability["user1@example.com"] is True
@@ -158,17 +161,15 @@ class TestAvailabilityChecker:
         # Busy period: 10:15-10:45 (overlaps)
         busy_slot = TimeSlot(
             start=sample_datetime_utc + timedelta(minutes=15),
-            end=sample_datetime_utc + timedelta(minutes=45)
+            end=sample_datetime_utc + timedelta(minutes=45),
         )
 
-        freebusy_data = {
-            "user1@example.com": [busy_slot]
-        }
+        freebusy_data = {"user1@example.com": [busy_slot]}
 
         availability = AvailabilityChecker.check_availability(
             slot_start=sample_datetime_utc,
             duration_minutes=30,
-            freebusy_data=freebusy_data
+            freebusy_data=freebusy_data,
         )
 
         assert availability["user1@example.com"] is False
@@ -179,17 +180,15 @@ class TestAvailabilityChecker:
         # Busy period: 11:00-12:00 (no overlap)
         busy_slot = TimeSlot(
             start=sample_datetime_utc + timedelta(hours=1),
-            end=sample_datetime_utc + timedelta(hours=2)
+            end=sample_datetime_utc + timedelta(hours=2),
         )
 
-        freebusy_data = {
-            "user1@example.com": [busy_slot]
-        }
+        freebusy_data = {"user1@example.com": [busy_slot]}
 
         availability = AvailabilityChecker.check_availability(
             slot_start=sample_datetime_utc,
             duration_minutes=30,
-            freebusy_data=freebusy_data
+            freebusy_data=freebusy_data,
         )
 
         assert availability["user1@example.com"] is True
@@ -198,21 +197,19 @@ class TestAvailabilityChecker:
         """Test checking availability with multiple busy periods."""
         busy_slot1 = TimeSlot(
             start=sample_datetime_utc - timedelta(hours=1),
-            end=sample_datetime_utc - timedelta(minutes=30)
+            end=sample_datetime_utc - timedelta(minutes=30),
         )
         busy_slot2 = TimeSlot(
             start=sample_datetime_utc + timedelta(hours=1),
-            end=sample_datetime_utc + timedelta(hours=2)
+            end=sample_datetime_utc + timedelta(hours=2),
         )
 
-        freebusy_data = {
-            "user1@example.com": [busy_slot1, busy_slot2]
-        }
+        freebusy_data = {"user1@example.com": [busy_slot1, busy_slot2]}
 
         availability = AvailabilityChecker.check_availability(
             slot_start=sample_datetime_utc,
             duration_minutes=30,
-            freebusy_data=freebusy_data
+            freebusy_data=freebusy_data,
         )
 
         assert availability["user1@example.com"] is True
@@ -229,21 +226,23 @@ class TestAvailabilityChecker:
 
         user_timezones = {
             "user1@example.com": "America/Los_Angeles",
-            "user2@example.com": "America/New_York"
+            "user2@example.com": "America/New_York",
         }
 
         filtered = AvailabilityChecker.filter_by_business_hours_multi_tz(
             slots=slots,
             user_timezones=user_timezones,
             business_start=business_hours["start"],
-            business_end=business_hours["end"]
+            business_end=business_hours["end"],
         )
 
         # Only the good_slot should pass (within business hours for both timezones)
         assert len(filtered) >= 1
         assert good_slot in filtered
 
-    def test_filter_by_business_hours_multi_tz_empty_timezones(self, sample_datetime_utc, business_hours):
+    def test_filter_by_business_hours_multi_tz_empty_timezones(
+        self, sample_datetime_utc, business_hours
+    ):
         """Test filtering with no user timezones returns all slots."""
         slots = [sample_datetime_utc]
 
@@ -251,7 +250,7 @@ class TestAvailabilityChecker:
             slots=slots,
             user_timezones={},
             business_start=business_hours["start"],
-            business_end=business_hours["end"]
+            business_end=business_hours["end"],
         )
 
         assert filtered == slots
@@ -264,20 +263,20 @@ class TestAvailabilityChecker:
 
         slots = [slot1, slot2, slot3]
 
-        freebusy_data = {
-            "user1@example.com": [],
-            "user2@example.com": []
-        }
+        freebusy_data = {"user1@example.com": [], "user2@example.com": []}
 
         result = AvailabilityChecker.get_earliest_available_slot(
             slots=slots,
             duration_minutes=30,
             freebusy_data=freebusy_data,
-            min_attendees=2
+            min_attendees=2,
         )
 
         assert result is not None
-        slot_start, availability, = result
+        (
+            slot_start,
+            availability,
+        ) = result
         assert slot_start == slot1
         assert len(availability) == 2
 
@@ -290,20 +289,16 @@ class TestAvailabilityChecker:
 
         # First slot is busy for user1
         busy_slot = TimeSlot(
-            start=sample_datetime_utc,
-            end=sample_datetime_utc + timedelta(hours=1)
+            start=sample_datetime_utc, end=sample_datetime_utc + timedelta(hours=1)
         )
 
-        freebusy_data = {
-            "user1@example.com": [busy_slot],
-            "user2@example.com": []
-        }
+        freebusy_data = {"user1@example.com": [busy_slot], "user2@example.com": []}
 
         result = AvailabilityChecker.get_earliest_available_slot(
             slots=slots,
             duration_minutes=30,
             freebusy_data=freebusy_data,
-            min_attendees=2
+            min_attendees=2,
         )
 
         assert result is not None
@@ -317,20 +312,19 @@ class TestAvailabilityChecker:
 
         # All users are busy
         busy_slot = TimeSlot(
-            start=sample_datetime_utc,
-            end=sample_datetime_utc + timedelta(hours=1)
+            start=sample_datetime_utc, end=sample_datetime_utc + timedelta(hours=1)
         )
 
         freebusy_data = {
             "user1@example.com": [busy_slot],
-            "user2@example.com": [busy_slot]
+            "user2@example.com": [busy_slot],
         }
 
         result = AvailabilityChecker.get_earliest_available_slot(
             slots=slots,
             duration_minutes=30,
             freebusy_data=freebusy_data,
-            min_attendees=2
+            min_attendees=2,
         )
 
         assert result is None
@@ -340,14 +334,13 @@ class TestAvailabilityChecker:
         slots = [sample_datetime_utc]
 
         busy_slot = TimeSlot(
-            start=sample_datetime_utc,
-            end=sample_datetime_utc + timedelta(hours=1)
+            start=sample_datetime_utc, end=sample_datetime_utc + timedelta(hours=1)
         )
 
         freebusy_data = {
             "user1@example.com": [],
             "user2@example.com": [busy_slot],
-            "user3@example.com": [busy_slot]
+            "user3@example.com": [busy_slot],
         }
 
         # With min_attendees=1, should find the slot
@@ -355,7 +348,7 @@ class TestAvailabilityChecker:
             slots=slots,
             duration_minutes=30,
             freebusy_data=freebusy_data,
-            min_attendees=1
+            min_attendees=1,
         )
         assert result is not None
 
@@ -364,6 +357,6 @@ class TestAvailabilityChecker:
             slots=slots,
             duration_minutes=30,
             freebusy_data=freebusy_data,
-            min_attendees=2
+            min_attendees=2,
         )
         assert result is None
