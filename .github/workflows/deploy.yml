@@ -52,7 +52,7 @@ jobs:
           project_id: ${{ secrets.GCP_PROJECT_SLUG }}
           workload_identity_provider: projects/${{ secrets.GCP_PROJECT_NUM }}/locations/global/workloadIdentityPools/github/providers/slack-meeting-scheduler-prvdr
       - name: deploy-test
-        if: ${{ inputs.environment == 'test' }}
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.environment == 'test' }}
         uses: google-github-actions/deploy-cloudrun@2028e2d7d30a78c6910e0632e48dd561b064884d # v3
         with:
           service: slack-meeting-scheduler-test
@@ -60,7 +60,7 @@ jobs:
           region: us-west1
           image: ${{ env.IMAGE_REF }}
       - name: deploy-prod
-        if: ${{ github.ref == 'refs/heads/main' && ((!inputs.environment) || inputs.environment == 'prod') }}
+        if: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.environment == 'prod' && github.ref == 'refs/heads/main') }}
         uses: google-github-actions/deploy-cloudrun@2028e2d7d30a78c6910e0632e48dd561b064884d # v3
         with:
           service: slack-meeting-scheduler
